@@ -4,20 +4,20 @@ const CourseSchema = new mongoose.Schema(
   {
     title: [
       {
-        key: {
+        title1: {
           type: String,
         },
-        value: {
+        title2: {
           type: String,
         },
       },
     ],
     sub: [
       {
-        key: {
+        sub1: {
           type: String,
         },
-        value: {
+        sub2: {
           type: String,
         },
       },
