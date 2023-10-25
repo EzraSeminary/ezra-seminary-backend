@@ -1,40 +1,62 @@
+const multer = require("multer");
 const Course = require("../models/Course");
 const courseController = require("express").Router();
+
+// image upload
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "public/images");
+  },
+  filename: (req, file, cb) => {
+    cb(null, new Date().toISOString() + file.originalname);
+  },
+});
+
+const upload = multer({ storage: storage });
 
 // get all courses
 courseController.get("/getall", async (req, res) => {
   try {
     const courses = await Course.find({});
-    return res.status(200).json(courses);
+    res.status(200).json(courses);
   } catch (error) {
     console.error(error);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
 // create course
-courseController.post("/create", async (req, res) => {
-  try {
-    const { title, sub } = req.body;
+courseController.post("/create", upload.any(), async (req, res) => {
+  const elements = [];
+  const files = {};
 
-    // Process the title and sub arrays to match the new schema structure
-    const processedTitle = title.map((item) => ({
-      key: Object.keys(item)[0],
-      value: Object.values(item)[0],
-    }));
+  req.files.forEach((file) => {
+    files[file.fieldname] = file;
+  });
 
-    const processedSub = sub.map((item) => ({
-      key: Object.keys(item)[0],
-      value: Object.values(item)[0],
-    }));
+  for (let key in req.body) {
+    const { type, id, value } = JSON.parse(req.body[key]);
+    let img = null;
 
-    const newCourse = await Course.create({
-      title: processedTitle,
-      sub: processedSub,
+    if (type === "img") {
+      img = files[key] ? files[key].path : null;
+    }
+
+    elements.push({
+      type,
+      id,
+      value,
+      img,
     });
+  }
 
-    return res.status(201).json(newCourse);
+  try {
+    const newCourse = new Course({ elements });
+    await newCourse.save();
+    res.status(201).json(newCourse);
   } catch (error) {
-    return res.status(500).json(error);
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
   }
 });
 

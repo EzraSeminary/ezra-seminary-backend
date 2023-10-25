@@ -2,19 +2,12 @@ const mongoose = require("mongoose");
 
 const CourseSchema = new mongoose.Schema(
   {
-    title: [
+    elements: [
       {
-        key: {
+        type: {
           type: String,
         },
-        value: {
-          type: String,
-        },
-      },
-    ],
-    sub: [
-      {
-        key: {
+        id: {
           type: String,
         },
         value: {
