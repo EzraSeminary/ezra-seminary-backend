@@ -1,44 +1,64 @@
+const multer = require("multer");
 const Course = require("../models/Course");
 const courseController = require("express").Router();
+
+// image upload
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "public/images");
+  },
+  filename: (req, file, cb) => {
+    cb(null, new Date().toISOString() + file.originalname);
+  },
+});
+
+const upload = multer({ storage: storage });
 
 // get all courses
 courseController.get("/getall", async (req, res) => {
   try {
     const courses = await Course.find({});
-
-    // console.log(courses);
-
-    return res.status(200).json(courses);
+    res.status(200).json(courses);
   } catch (error) {
     console.error(error);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
-// // create a course
-// courseController.post("/create", async (req, res) => {
-//   try {
-//     const newCourse = await Course.create({
-//       ...req.body,
-//     });
+//create courses
+courseController.post("/create", upload.any(), async (req, res) => {
+  const elements = [];
+  const files = req.files;
+  const imageIds = JSON.parse(req.body.imageIds);
 
-//     return res.status(201).json(newCourse);
-//   } catch (error) {
-//     return res.status(500).json(error);
-//   }
-// });
+  for (let key in req.body) {
+    if (key !== "images" && key !== "imageIds") {
+      const element = {
+        type: key.includes("title") ? "title" : "sub",
+        id: key,
+        value: req.body[key],
+      };
+      elements.push(element);
+    }
+  }
 
-// create course
-courseController.post("/create", async (req, res) => {
+  files.forEach((file, index) => {
+    const element = {
+      type: "img",
+      id: imageIds[index],
+      value: file.filename,
+      img: file.path,
+    };
+    elements.push(element);
+  });
+
   try {
-    // console.log(req.body);
-    // console.log(req.files);
-    const newCourse = await Course.create({
-      title: req.body.title,
-    });
-
-    return res.status(201).json(newCourse);
+    const newCourse = new Course({ elements });
+    await newCourse.save();
+    res.status(201).json(newCourse);
   } catch (error) {
-    return res.status(500).json(error);
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
   }
 });
 

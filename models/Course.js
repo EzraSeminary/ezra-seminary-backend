@@ -2,10 +2,23 @@ const mongoose = require("mongoose");
 
 const CourseSchema = new mongoose.Schema(
   {
-    title: {
-      type: String,
-      required: true,
-    },
+    elements: [
+      {
+        type: {
+          type: String,
+        },
+        id: {
+          type: String,
+        },
+        value: {
+          type: String,
+        },
+        img: {
+          type: String,
+          default: null,
+        },
+      },
+    ],
   },
   { timestamps: true }
 );
