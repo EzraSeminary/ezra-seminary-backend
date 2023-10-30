@@ -25,30 +25,32 @@ courseController.get("/getall", async (req, res) => {
   }
 });
 
-// create course
+//create courses
 courseController.post("/create", upload.any(), async (req, res) => {
   const elements = [];
-  const files = {};
-
-  req.files.forEach((file) => {
-    files[file.fieldname] = file;
-  });
+  const files = req.files;
+  const imageIds = JSON.parse(req.body.imageIds);
 
   for (let key in req.body) {
-    const { type, id, value } = JSON.parse(req.body[key]);
-    let img = null;
-
-    if (type === "img") {
-      img = files[key] ? files[key].path : null;
+    if (key !== "images" && key !== "imageIds") {
+      const element = {
+        type: key.includes("title") ? "title" : "sub",
+        id: key,
+        value: req.body[key],
+      };
+      elements.push(element);
     }
-
-    elements.push({
-      type,
-      id,
-      value,
-      img,
-    });
   }
+
+  files.forEach((file, index) => {
+    const element = {
+      type: "img",
+      id: imageIds[index],
+      value: file.filename,
+      img: file.path,
+    };
+    elements.push(element);
+  });
 
   try {
     const newCourse = new Course({ elements });

@@ -13,6 +13,10 @@ const CourseSchema = new mongoose.Schema(
         value: {
           type: String,
         },
+        img: {
+          type: String,
+          default: null,
+        },
       },
     ],
   },
