@@ -1,7 +1,20 @@
 const Devotion = require('../models/Devotion');
+const multer = require("multer");
 
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "public/images");
+  },
+  filename: (req, file, cb) => {
+    cb(null, new Date().toISOString() + file.originalname);
+  },
+});
+
+const upload = multer({ storage: storage });
 // Controller function for handling form submission
-const submitForm = async (req, res) => {
+
+const createDevotion = async (req, res) => {
   try {
     // Extract form data from the request body
     const { month, day, title, chapter, verse, body, prayer, image, paragraphs } = req.body;
@@ -29,5 +42,5 @@ const submitForm = async (req, res) => {
 };
 
 module.exports = {
-  submitForm,
+ createDevotion,
 };
