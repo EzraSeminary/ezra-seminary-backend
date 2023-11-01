@@ -18,6 +18,7 @@ app.use(
 
 app.use("/course", courseController);
 
+
 app.use("/images", express.static("public/images"));
 
 app.listen(5000, () => console.log("server has been started successfully!"));
