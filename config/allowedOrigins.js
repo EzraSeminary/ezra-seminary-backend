@@ -4,5 +4,5 @@
 //     'http://localhost:5173'
 // ]
 
- const allowedOrigins = '*';
+const allowedOrigins = '*';
 module.exports = allowedOrigins;

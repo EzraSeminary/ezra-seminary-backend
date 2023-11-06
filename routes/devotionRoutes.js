@@ -1,15 +1,22 @@
-const express = require('express')
-const router = express.Router()
-const devotionController = require('../controllers/devotionController')
-
 // const verifyJWT = require('../middleware/verifyJWT')
 
 // router.use(verifyJWT)
 
-router.route('/create')
-    // .get(notesController.getAllNotes)
-    .post(devotionController.createDevotion)
-    // .patch(notesController.updateNote)
-    // .delete(notesController.deleteNote)
+// routes/devotionRoutes.js
 
-module.exports = router
+const express = require('express');
+const router = express.Router();
+const devotionController = require('../controllers/devotionController');
+const upload = require('../middleware/upload');
+
+const { createDevotion, getDevotions } = devotionController;
+
+router.route('/create')
+  .post(upload.single('image'), createDevotion);
+
+router.route('/')
+  .get(getDevotions);
+
+module.exports = router;
+
+
