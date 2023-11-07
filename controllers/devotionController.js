@@ -62,5 +62,6 @@ const deleteDevotion = async (req, res) => {
 module.exports = {
   createDevotion,
   getDevotions,
+  deleteDevotion,
 };
 

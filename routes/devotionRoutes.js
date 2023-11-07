@@ -18,7 +18,7 @@ router.route('/show')
   .get(getDevotions);
 
 router.route("/:id")
-  .delete(deleteDevotion);
+  .delete(devotionController.deleteDevotion);
 
 
 module.exports = router;
