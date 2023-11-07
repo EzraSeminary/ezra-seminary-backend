@@ -44,6 +44,21 @@ const getDevotions = async (req, res) => {
   }
 };
 
+const deleteDevotion = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deletedDevotion = await Devotion.findByIdAndDelete(id);
+    if (!deletedDevotion) {
+      return res.status(404).json({ error: "Devotion not found" });
+    }
+    res.status(200).json({ message: "Devotion deleted successfully" });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+
 module.exports = {
   createDevotion,
   getDevotions,

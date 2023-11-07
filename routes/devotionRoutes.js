@@ -14,8 +14,12 @@ const { createDevotion, getDevotions } = devotionController;
 router.route('/create')
   .post(upload.single('image'), createDevotion);
 
-router.route('/')
+router.route('/show')
   .get(getDevotions);
+
+router.route("/:id")
+  .delete(deleteDevotion);
+
 
 module.exports = router;
 
