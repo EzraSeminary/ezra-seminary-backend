@@ -9,7 +9,7 @@ const router = express.Router();
 const devotionController = require('../controllers/devotionController');
 const upload = require('../middleware/upload');
 
-const { createDevotion, getDevotions } = devotionController;
+const { createDevotion, getDevotions, deleteDevotion } = devotionController;
 
 router.route('/create')
   .post(upload.single('image'), createDevotion);
@@ -18,7 +18,7 @@ router.route('/show')
   .get(getDevotions);
 
 router.route("/:id")
-  .delete(devotionController.deleteDevotion);
+  .delete(deleteDevotion);
 
 
 module.exports = router;
