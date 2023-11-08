@@ -3,6 +3,7 @@ const connectDb = require("./config/connectDb");
 const dotenv = require("dotenv").config();
 const cors = require("cors");
 const courseController = require("./controllers/courseController");
+const quizController = require("./controllers/quizController");
 
 const app = express();
 connectDb();
@@ -17,6 +18,7 @@ app.use(
 );
 
 app.use("/course", courseController);
+app.use("/quiz", quizController);
 
 app.use("/images", express.static("public/images"));
 
