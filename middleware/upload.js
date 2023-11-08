@@ -1,5 +1,3 @@
-// middleware/upload.js
-
 const multer = require('multer');
 
 const storage = multer.diskStorage({
@@ -20,7 +18,11 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-const upload = multer({ storage, fileFilter });
+const upload = multer({
+  storage: storage,
+  fileFilter: fileFilter,
+  limits: { fileSize: 10 * 1024 * 1024 } // 10 MB limit
+});
 
 module.exports = upload;
 
