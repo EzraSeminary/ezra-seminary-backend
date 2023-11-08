@@ -7,7 +7,8 @@ const dotenv = require("dotenv").config();
 const cors = require("cors");
 const devotionRoutes = require('./routes/devotionRoutes');
 const path = require('path');
-
+const courseController = require("./controllers/courseController");
+const quizController = require("./controllers/quizController");
 
 connectDb();
 
@@ -16,10 +17,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use('/', express.static(path.join(__dirname, 'public')))
-
 app.use('/', require('./routes/root'))
-
 app.use('/devotion', devotionRoutes);
+app.use("/course", courseController);
+app.use("/quiz", quizController);
 
 app.use("/images", express.static("public/images"));
 
