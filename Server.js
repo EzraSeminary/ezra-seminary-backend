@@ -1,18 +1,21 @@
 // app.js
 
 const express = require("express");
+const app = express();
 const connectDb = require("./config/connectDb");
 const dotenv = require("dotenv").config();
 const cors = require("cors");
 const devotionRoutes = require('./routes/devotionRoutes');
+const path = require('path');
 
-const app = express();
 
 connectDb();
 
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+app.use('/', express.static(path.join(__dirname, 'public')))
 
 app.use('/', require('./routes/root'))
 
