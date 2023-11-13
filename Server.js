@@ -1,12 +1,14 @@
 // app.js
 
 const express = require("express");
+const app = express();
 const connectDb = require("./config/connectDb");
 const dotenv = require("dotenv").config();
 const cors = require("cors");
 const devotionRoutes = require('./routes/devotionRoutes');
-
-const app = express();
+const path = require('path');
+const courseController = require("./controllers/courseController");
+const quizController = require("./controllers/quizController");
 
 connectDb();
 
@@ -14,9 +16,11 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.use('/', express.static(path.join(__dirname, 'public')))
 app.use('/', require('./routes/root'))
-
 app.use('/devotion', devotionRoutes);
+app.use("/course", courseController);
+app.use("/quiz", quizController);
 
 app.use("/images", express.static("public/images"));
 
