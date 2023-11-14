@@ -8,23 +8,23 @@ const storage = multer.diskStorage({
     cb(null, "public/images");
   },
   filename: (req, file, cb) => {
-    const timestamp = new Date().toISOString().replace(/:/g, '-');
+    const timestamp = new Date().toISOString().replace(/:/g, "-");
     cb(null, `${timestamp}-${file.originalname}`);
   },
 });
 
 const fileFilter = (req, file, cb) => {
-  if (file.mimetype.startsWith('image/')) {
+  if (file.mimetype.startsWith("image/")) {
     cb(null, true);
   } else {
-    cb(new Error('Only image files are allowed'), false);
+    cb(new Error("Only image files are allowed"), false);
   }
 };
 
 const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 } // 5 MB limit
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB limit
 });
 
 // get all courses
@@ -42,6 +42,7 @@ courseController.get("/getall", async (req, res) => {
 courseController.post("/create", upload.any(), async (req, res) => {
   const elements = [];
   const files = req.files;
+  const imageIds = JSON.parse(req.body.imageIds);
 
   for (let key in req.body) {
     if (key !== "images" && key !== "imageIds") {
@@ -54,14 +55,14 @@ courseController.post("/create", upload.any(), async (req, res) => {
     }
   }
 
-  files.forEach((file, index) => {
+  imageIds.forEach((imageId, index) => {
     const element = {
       type: "img",
-      id: req.body.imageIds[index],
-      value: file.filename,
-      img: file.path,
+      id: imageId,
+      value: files[index].filename,
     };
-    elements.push(element);
+    const position = elements.findIndex((el) => el.id > imageId);
+    elements.splice(position, 0, element);
   });
 
   try {
@@ -75,4 +76,3 @@ courseController.post("/create", upload.any(), async (req, res) => {
 });
 
 module.exports = courseController;
-
