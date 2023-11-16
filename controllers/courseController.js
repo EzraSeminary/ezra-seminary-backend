@@ -27,7 +27,7 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB limit
 });
 
-// get all courses
+// Get all courses
 courseController.get("/getall", async (req, res) => {
   try {
     const courses = await Course.find({});
@@ -38,35 +38,52 @@ courseController.get("/getall", async (req, res) => {
   }
 });
 
-// create courses
+// Create a course
 courseController.post("/create", upload.any(), async (req, res) => {
-  const elements = [];
-  const files = req.files;
-  const imageIds = JSON.parse(req.body.imageIds);
+  const chapters = [];
 
-  for (let key in req.body) {
-    if (key !== "images" && key !== "imageIds") {
-      const element = {
-        type: key.includes("title") ? "title" : "sub",
-        id: key,
-        value: req.body[key],
-      };
-      elements.push(element);
+  const { name, description } = req.body;
+  const image = req.files[0].filename;
+
+  const chapterKeys = Object.keys(req.body).filter((key) =>
+    key.startsWith("chapter")
+  );
+
+  for (let chapterKey of chapterKeys) {
+    const chapterIndex = chapterKey.split("-")[1];
+    const slideKeys = Object.keys(req.body).filter((key) =>
+      key.startsWith(`chapter-${chapterIndex}-slide`)
+    );
+
+    const slides = [];
+
+    for (let slideKey of slideKeys) {
+      const slideIndex = slideKey.split("-")[2];
+      const elementKeys = Object.keys(req.body).filter((key) =>
+        key.startsWith(`chapter-${chapterIndex}-slide-${slideIndex}-`)
+      );
+
+      const elements = [];
+
+      for (let elementKey of elementKeys) {
+        if (elementKey.endsWith("-title")) {
+          const title = req.body[elementKey];
+          elements.push({ type: "title", value: title });
+        } else if (elementKey.endsWith("-subslide")) {
+          const subslideIndex = elementKey.split("-")[4];
+          const content = req.body[elementKey];
+          elements.push({ type: "sub", value: content, subslides: [] });
+        }
+      }
+
+      slides.push({ slide: `Slide ${slideIndex}`, elements });
     }
+
+    chapters.push({ chapter: `Chapter ${chapterIndex}`, slides });
   }
 
-  imageIds.forEach((imageId, index) => {
-    const element = {
-      type: "img",
-      id: imageId,
-      value: files[index].filename,
-    };
-    const position = elements.findIndex((el) => el.id > imageId);
-    elements.splice(position, 0, element);
-  });
-
   try {
-    const newCourse = new Course({ elements });
+    const newCourse = new Course({ name, description, image, chapters });
     await newCourse.save();
     res.status(201).json(newCourse);
   } catch (error) {
