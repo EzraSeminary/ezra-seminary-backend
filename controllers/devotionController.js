@@ -35,7 +35,7 @@ const createDevotion = async (req, res) => {
 
 const getDevotions = async (req, res) => {
   try {
-    const devotions = await Devotion.find();
+    const devotions = await Devotion.find().sort({ _id: -1 });
 
     res.status(200).json(devotions);
   } catch (error) {
@@ -43,6 +43,7 @@ const getDevotions = async (req, res) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
+
 
 const deleteDevotion = async (req, res) => {
   try {
