@@ -40,33 +40,35 @@ courseController.get("/getall", async (req, res) => {
 
 // create courses
 courseController.post("/create", upload.any(), async (req, res) => {
-  const elements = [];
+  const { name, description, chapters } = req.body;
   const files = req.files;
-  const imageIds = JSON.parse(req.body.imageIds);
+  const imageIds = req.body.imageIds ? JSON.parse(req.body.imageIds) : [];
 
-  for (let key in req.body) {
-    if (key !== "images" && key !== "imageIds") {
-      const element = {
-        type: key.includes("title") ? "title" : "sub",
-        id: key,
-        value: req.body[key],
-      };
-      elements.push(element);
-    }
-  }
+  const imageElements = imageIds.map((imageId, index) => ({
+    type: "img",
+    id: imageId,
+    value: files[index].filename,
+  }));
 
-  imageIds.forEach((imageId, index) => {
-    const element = {
-      type: "img",
-      id: imageId,
-      value: files[index].filename,
-    };
-    const position = elements.findIndex((el) => el.id > imageId);
-    elements.splice(position, 0, element);
-  });
+  const modifiedChapters = chapters.map((chapter) => ({
+    ...chapter,
+    slides: chapter.slides.map((slide) => ({
+      ...slide,
+      elements: [
+        ...slide.elements,
+        ...imageElements.filter((imgEl) => imgEl.id.startsWith(slide.slide)),
+      ],
+    })),
+  }));
 
   try {
-    const newCourse = new Course({ elements });
+    const newCourse = new Course({
+      name,
+      description,
+      image: files && files.length > 0 ? files[0].filename : "", // assuming the first image is the course image, if available
+      chapters: modifiedChapters,
+    });
+
     await newCourse.save();
     res.status(201).json(newCourse);
   } catch (error) {
