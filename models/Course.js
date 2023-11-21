@@ -32,7 +32,7 @@ const chapterSchema = new mongoose.Schema({
 
 const CourseSchema = new mongoose.Schema(
   {
-    name: {
+    title: {
       type: String,
     },
     description: {
