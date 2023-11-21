@@ -1,5 +1,5 @@
 const multer = require("multer");
-const Course = require("../models/Course");
+const Element = require("../models/Element");
 const elementController = require("express").Router();
 
 // image upload
@@ -30,7 +30,7 @@ const upload = multer({
 // get all courses
 elementController.get("/getall", async (req, res) => {
   try {
-    const courses = await Course.find({});
+    const courses = await Element.find({});
     res.status(200).json(courses);
   } catch (error) {
     console.error(error);
@@ -66,7 +66,7 @@ elementController.post("/create", upload.any(), async (req, res) => {
   });
 
   try {
-    const newCourse = new Course({ elements });
+    const newCourse = new Element({ elements });
     await newCourse.save();
     res.status(201).json(newCourse);
   } catch (error) {

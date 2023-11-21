@@ -1,16 +1,5 @@
 const mongoose = require("mongoose");
 
-const subSlideSchema = new mongoose.Schema({
-  title: {
-    type: String,
-    required: true,
-  },
-  content: {
-    type: String,
-    required: true,
-  },
-});
-
 const ElementSchema = new mongoose.Schema({
   type: {
     type: String,
@@ -20,10 +9,6 @@ const ElementSchema = new mongoose.Schema({
   },
   value: {
     type: String,
-  },
-  subslides: {
-    type: [subSlideSchema],
-    required: true,
   },
 });
 
@@ -61,7 +46,6 @@ const CourseSchema = new mongoose.Schema(
     },
     image: {
       type: String,
-      required: true,
     },
     chapters: {
       type: [chapterSchema],

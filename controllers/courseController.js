@@ -27,7 +27,7 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB limit
 });
 
-// Get all courses
+// get all courses
 courseController.get("/getall", async (req, res) => {
   try {
     const courses = await Course.find({});
@@ -38,52 +38,37 @@ courseController.get("/getall", async (req, res) => {
   }
 });
 
-// Create a course
+// create courses
 courseController.post("/create", upload.any(), async (req, res) => {
-  const chapters = [];
+  const { name, description, chapters } = req.body;
+  const files = req.files;
+  const imageIds = req.body.imageIds ? JSON.parse(req.body.imageIds) : [];
 
-  const { name, description } = req.body;
-  const image = req.files[0].filename;
+  const imageElements = imageIds.map((imageId, index) => ({
+    type: "img",
+    id: imageId,
+    value: files[index].filename,
+  }));
 
-  const chapterKeys = Object.keys(req.body).filter((key) =>
-    key.startsWith("chapter")
-  );
-
-  for (let chapterKey of chapterKeys) {
-    const chapterIndex = chapterKey.split("-")[1];
-    const slideKeys = Object.keys(req.body).filter((key) =>
-      key.startsWith(`chapter-${chapterIndex}-slide`)
-    );
-
-    const slides = [];
-
-    for (let slideKey of slideKeys) {
-      const slideIndex = slideKey.split("-")[2];
-      const elementKeys = Object.keys(req.body).filter((key) =>
-        key.startsWith(`chapter-${chapterIndex}-slide-${slideIndex}-`)
-      );
-
-      const elements = [];
-
-      for (let elementKey of elementKeys) {
-        if (elementKey.endsWith("-title")) {
-          const title = req.body[elementKey];
-          elements.push({ type: "title", value: title });
-        } else if (elementKey.endsWith("-subslide")) {
-          const subslideIndex = elementKey.split("-")[4];
-          const content = req.body[elementKey];
-          elements.push({ type: "sub", value: content, subslides: [] });
-        }
-      }
-
-      slides.push({ slide: `Slide ${slideIndex}`, elements });
-    }
-
-    chapters.push({ chapter: `Chapter ${chapterIndex}`, slides });
-  }
+  const modifiedChapters = chapters.map((chapter) => ({
+    ...chapter,
+    slides: chapter.slides.map((slide) => ({
+      ...slide,
+      elements: [
+        ...slide.elements,
+        ...imageElements.filter((imgEl) => imgEl.id.startsWith(slide.slide)),
+      ],
+    })),
+  }));
 
   try {
-    const newCourse = new Course({ name, description, image, chapters });
+    const newCourse = new Course({
+      name,
+      description,
+      image: files && files.length > 0 ? files[0].filename : "", // assuming the first image is the course image, if available
+      chapters: modifiedChapters,
+    });
+
     await newCourse.save();
     res.status(201).json(newCourse);
   } catch (error) {
