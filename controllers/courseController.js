@@ -40,7 +40,7 @@ courseController.get("/getall", async (req, res) => {
 
 // create courses
 courseController.post("/create", upload.any(), async (req, res) => {
-  const { name, description, chapters } = req.body;
+  const { title, description, chapters } = req.body;
   const files = req.files;
   const imageIds = req.body.imageIds ? JSON.parse(req.body.imageIds) : [];
 
@@ -63,7 +63,7 @@ courseController.post("/create", upload.any(), async (req, res) => {
 
   try {
     const newCourse = new Course({
-      name,
+      title,
       description,
       image: files && files.length > 0 ? files[0].filename : "", // assuming the first image is the course image, if available
       chapters: modifiedChapters,
