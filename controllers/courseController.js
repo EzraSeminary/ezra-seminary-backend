@@ -38,6 +38,20 @@ courseController.get("/getall", async (req, res) => {
   }
 });
 
+// get a single course
+courseController.get("/get/:id", async (req, res) => {
+  try {
+    const course = await Course.findById(req.params.id);
+    if (!course) {
+      return res.status(404).json({ message: "Course not found" });
+    }
+    res.status(200).json(course);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 // create courses
 courseController.post("/create", upload.any(), async (req, res) => {
   const { title, description, chapters } = req.body;
