@@ -1,5 +1,6 @@
 const multer = require("multer");
 const Course = require("../models/Course");
+// const chapterSchema = require("../models/Chapter");
 const courseController = require("express").Router();
 
 // image upload
@@ -46,6 +47,21 @@ courseController.get("/get/:id", async (req, res) => {
       return res.status(404).json({ message: "Course not found" });
     }
     res.status(200).json(course);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// get a single chapter by ID
+courseController.get("/getChapter/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const chapter = await chapterSchema.findById(id);
+    if (!chapter) {
+      return res.status(404).json({ message: "Chapter not found" });
+    }
+    res.status(200).json(chapter);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server error" });
