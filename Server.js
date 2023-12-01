@@ -7,9 +7,11 @@ const dotenv = require("dotenv").config();
 const cors = require("cors");
 const corsOptions = require("./config/corsOptions");
 const devotionRoutes = require("./routes/devotionRoutes");
+const userRoutes = require("./routes/userRoutes");
 const path = require("path");
 const courseController = require("./controllers/courseController");
 const quizController = require("./controllers/quizController");
+const requireAuth = require("./middleware/requireAuth");
 
 connectDb();
 
@@ -19,6 +21,13 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use("/", express.static(path.join(__dirname, "public")));
 app.use("/", require("./routes/root"));
+// app.use((req, res, next) => {
+//   console.log(req.path, req.method);
+//   next();
+// });
+// All routes are authenticated by default
+app.use("/users", userRoutes);
+app.use(requireAuth);
 app.use("/devotion", devotionRoutes);
 app.use("/course", courseController);
 app.use("/quiz", quizController);
@@ -36,6 +45,8 @@ app.all("*", (req, res) => {
   }
 });
 
-app.listen(5000, () => {
-  console.log("Server is running on port 5000");
+// listen for requests
+app.listen(process.env.PORT, () => {
+  console.log("connected to the database");
+  console.log(`Server is listening on port ${process.env.PORT}`);
 });

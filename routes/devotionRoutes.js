@@ -12,7 +12,7 @@ const verifyJWT = require('../middleware/requireAuth');
 
 const { createDevotion, getDevotions, deleteDevotion } = devotionController;
 
-router.use(verifyJWT);
+// router.use(verifyJWT);
 
 router.route('/create')
   .post(upload.single('image'), createDevotion);

@@ -1,7 +1,7 @@
-const express = require('express')
-const router = express.Router()
+const express = require("express");
+const router = express.Router();
 const { loginUser, signupUser } = require("../controllers/usersController");
-// const verifyJWT = require('../middleware/verifyJWT')
+const verifyJWT = require("../middleware/requireAuth");
 
 // router.use(verifyJWT)
 
@@ -16,4 +16,4 @@ router.post("/login", loginUser);
 //signup route
 router.post("/signup", signupUser);
 
-// module.exports = router
+module.exports = router;
