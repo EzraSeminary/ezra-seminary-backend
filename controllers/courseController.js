@@ -1,6 +1,8 @@
 const multer = require("multer");
+const express = require("express");
 const Course = require("../models/Course");
 const courseController = require("express").Router();
+const verifyJWT = require("../middleware/requireAuth");
 
 // image upload
 const storage = multer.diskStorage({
