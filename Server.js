@@ -5,6 +5,7 @@ const app = express();
 const connectDb = require("./config/connectDb");
 const dotenv = require("dotenv").config();
 const cors = require("cors");
+const corsOptions = require("./config/corsOptions");
 const devotionRoutes = require("./routes/devotionRoutes");
 const path = require("path");
 const courseController = require("./controllers/courseController");
@@ -12,7 +13,7 @@ const quizController = require("./controllers/quizController");
 
 connectDb();
 
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
