@@ -1,7 +1,7 @@
-// const express = require('express')
-// const router = express.Router()
-// const usersController = require('../controllers/usersController')
-// const verifyJWT = require('../middleware/verifyJWT')
+const express = require("express");
+const router = express.Router();
+const { loginUser, signupUser } = require("../controllers/usersController");
+const verifyJWT = require("../middleware/requireAuth");
 
 // router.use(verifyJWT)
 
@@ -11,4 +11,9 @@
 //     .patch(usersController.updateUser)
 //     .delete(usersController.deleteUser)
 
-// module.exports = router
+//login route
+router.post("/login", loginUser);
+//signup route
+router.post("/signup", signupUser);
+
+module.exports = router;
