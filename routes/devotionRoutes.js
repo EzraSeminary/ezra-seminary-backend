@@ -15,9 +15,7 @@ const { createDevotion, getDevotions, deleteDevotion } = devotionController;
 
 // router.use(verifyJWT);
 
-router
-  .route("/create")
-  .post(upload.single("image"), verifyJWT, requireAdmin, createDevotion);
+router.route("/create").post(upload.single("image"), createDevotion);
 
 router.route("/show").get(verifyJWT, getDevotions);
 
