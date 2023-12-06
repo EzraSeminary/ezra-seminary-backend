@@ -9,13 +9,13 @@ const userSchema = new Schema({
   password: { type: String, required: true },
   role: {
     type: String,
-    enum: ["user", "admin"], // Enum to restrict the value to 'user' or 'admin'
-    default: "user", // Default role assigned if none is specified
+    enum: ["Learner", "Admin"], // Enum to restrict the value to 'user' or 'admin'
+    default: "Learner", // Default role assigned if none is specified
   },
 });
 
 //static signup method
-userSchema.statics.signup = async function (email, password, role = "user") {
+userSchema.statics.signup = async function (email, password, role = "Learner") {
   // validation
   if (!email || !password) {
     throw Error("All fields must be filled");
@@ -37,7 +37,7 @@ userSchema.statics.signup = async function (email, password, role = "user") {
   const hash = await bcrypt.hash(password, salt);
 
   // Ensure the role is either 'user' or 'admin'
-  if (!["user", "admin"].includes(role)) {
+  if (!["Learner", "Admin"].includes(role)) {
     throw Error("Role is not valid");
   }
 
