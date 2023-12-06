@@ -13,6 +13,9 @@ const courseController = require("./controllers/courseController");
 const quizController = require("./controllers/quizController");
 const requireAuth = require("./middleware/requireAuth");
 
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb" }));
+
 connectDb();
 
 app.use(cors(corsOptions));
