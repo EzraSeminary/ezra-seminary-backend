@@ -1,24 +1,26 @@
 // models/Devotion.js
 
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-const devotionSchema = new mongoose.Schema({
-  month: String,
-  day: String,
-  title: String,
-  chapter: String,
-  verse: String,
-  body: [String],
-  prayer: String,
-  image: String,
-});
+const devotionSchema = new mongoose.Schema(
+  {
+    month: String,
+    day: String,
+    title: String,
+    chapter: String,
+    verse: String,
+    body: [String],
+    prayer: String,
+    image: String,
+  },
+  {
+    timestamps: true,
+  }
+);
 
-const Devotion = mongoose.model('Devotion', devotionSchema);
+const Devotion = mongoose.model("Devotion", devotionSchema);
 
 module.exports = Devotion;
-
-
-
 
 // body: []
 // chapter:"12"

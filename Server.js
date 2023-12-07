@@ -27,7 +27,6 @@ app.use("/", require("./routes/root"));
 // });
 // All routes are authenticated by default
 app.use("/users", userRoutes);
-app.use(requireAuth);
 app.use("/devotion", devotionRoutes);
 app.use("/course", courseController);
 app.use("/quiz", quizController);
