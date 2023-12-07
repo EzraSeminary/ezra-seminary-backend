@@ -1,6 +1,6 @@
 // controllers/devotionController.js
 
-const Devotion = require('../models/Devotion');
+const Devotion = require("../models/Devotion");
 
 const createDevotion = async (req, res) => {
   try {
@@ -8,8 +8,8 @@ const createDevotion = async (req, res) => {
 
     // Extract all paragraph fields from the request body
     const paragraphs = Object.keys(req.body)
-      .filter(key => key.startsWith('paragraph'))
-      .map(key => req.body[key]);
+      .filter((key) => key.startsWith("paragraph"))
+      .map((key) => req.body[key]);
 
     const image = req.file ? req.file.filename : null;
 
@@ -29,18 +29,18 @@ const createDevotion = async (req, res) => {
     res.status(201).json(savedDevotion);
   } catch (error) {
     console.log(error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
 const getDevotions = async (req, res) => {
   try {
-    const devotions = await Devotion.find();
+    const devotions = await Devotion.find().sort("-createdAt");
 
     res.status(200).json(devotions);
   } catch (error) {
     console.log(error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
@@ -58,10 +58,8 @@ const deleteDevotion = async (req, res) => {
   }
 };
 
-
 module.exports = {
   createDevotion,
   getDevotions,
   deleteDevotion,
 };
-

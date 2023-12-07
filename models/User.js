@@ -7,10 +7,15 @@ const Schema = mongoose.Schema;
 const userSchema = new Schema({
   email: { type: String, required: true, unique: true }, // email must be unique
   password: { type: String, required: true },
+  role: {
+    type: String,
+    enum: ["Learner", "Admin"], // Enum to restrict the value to 'user' or 'admin'
+    default: "Learner", // Default role assigned if none is specified
+  },
 });
 
 //static signup method
-userSchema.statics.signup = async function (email, password) {
+userSchema.statics.signup = async function (email, password, role = "Learner") {
   // validation
   if (!email || !password) {
     throw Error("All fields must be filled");
@@ -30,6 +35,11 @@ userSchema.statics.signup = async function (email, password) {
   // use bcrypt to hash the password
   const salt = await bcrypt.genSalt(10);
   const hash = await bcrypt.hash(password, salt);
+
+  // Ensure the role is either 'user' or 'admin'
+  if (!["Learner", "Admin"].includes(role)) {
+    throw Error("Role is not valid");
+  }
 
   const user = await this.create({ email, password: hash });
 
