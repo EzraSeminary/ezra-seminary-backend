@@ -85,7 +85,18 @@ courseController.get("/getchapter/:courseId/:chapterId", async (req, res) => {
 
 // create courses
 courseController.post("/create", upload.any(), async (req, res) => {
-  const { title, description, chapters } = req.body;
+  const { title, description } = req.body;
+  // Parse the chapters JSON string to an array
+  let chapters;
+  try {
+    chapters = JSON.parse(req.body.chapters);
+  } catch (error) {
+    // If there is an error in parsing, return a response immediately
+    return res
+      .status(400)
+      .json({ message: "Invalid chapters format: " + error.message });
+  }
+
   const files = req.files;
   const imageIds = req.body.imageIds ? JSON.parse(req.body.imageIds) : [];
 
@@ -94,6 +105,8 @@ courseController.post("/create", upload.any(), async (req, res) => {
     id: imageId,
     value: files[index].filename,
   }));
+
+  // console.log("Received chapters:", chapters);
 
   const modifiedChapters = chapters.map((chapter) => ({
     ...chapter,
