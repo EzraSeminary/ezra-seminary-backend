@@ -17,9 +17,15 @@ const userSchema = new Schema({
 });
 
 //static signup method
-userSchema.statics.signup = async function (email, password, role = "Learner") {
+userSchema.statics.signup = async function (
+  firstName,
+  lastName,
+  email,
+  password,
+  role = "Learner"
+) {
   // validation
-  if (!email || !password) {
+  if (!firstName || !lastName || !email || !password) {
     throw Error("All fields must be filled");
   }
   if (!validator.isEmail(email)) {
@@ -43,7 +49,13 @@ userSchema.statics.signup = async function (email, password, role = "Learner") {
     throw Error("Role is not valid");
   }
 
-  const user = await this.create({ email, password: hash });
+  const user = await this.create({
+    firstName,
+    lastName,
+    email,
+    password: hash,
+    role,
+  });
 
   return user;
 };
