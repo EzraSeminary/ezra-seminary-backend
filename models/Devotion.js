@@ -21,12 +21,3 @@ const devotionSchema = new mongoose.Schema(
 const Devotion = mongoose.model("Devotion", devotionSchema);
 
 module.exports = Devotion;
-
-// body: []
-// chapter:"12"
-// day:"12"
-// image:"data:image/jpeg;base64,/9j/4QvKRXhpZgAASUkqAAgAAA
-// month:"ህዳር"
-// prayer:"ሀልሎ"
-// title:"hello"
-// verse:"ስጡ ይሰጣችኋል"
