@@ -58,8 +58,47 @@ const deleteDevotion = async (req, res) => {
   }
 };
 
+const updateDevotion = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { month, day, title, chapter, verse, prayer } = req.body;
+
+    // Extract all paragraph fields from the request body
+    const paragraphs = Object.keys(req.body)
+      .filter((key) => key.startsWith("paragraph"))
+      .map((key) => req.body[key]);
+
+    const image = req.file ? req.file.filename : null;
+
+    const updatedDevotion = await Devotion.findByIdAndUpdate(
+      id,
+      {
+        month,
+        day,
+        title,
+        chapter,
+        verse,
+        body: paragraphs,
+        prayer,
+        image,
+      },
+      { new: true }
+    );
+
+    if (!updatedDevotion) {
+      return res.status(404).json({ error: "Devotion not found" });
+    }
+
+    res.status(200).json(updatedDevotion);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
 module.exports = {
   createDevotion,
   getDevotions,
   deleteDevotion,
+  updateDevotion,
 };
