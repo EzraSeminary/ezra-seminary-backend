@@ -8,7 +8,7 @@ const ElementSchema = new mongoose.Schema({
     type: String,
   },
   value: {
-    type: String,
+    type: mongoose.Schema.Types.Mixed,
   },
 });
 
