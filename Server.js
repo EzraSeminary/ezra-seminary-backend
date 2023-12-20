@@ -22,7 +22,7 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use("/", express.static(path.join(__dirname, "public")));
+app.use("/images", express.static(path.join(__dirname, "public/images")));
 app.use("/", require("./routes/root"));
 // app.use((req, res, next) => {
 //   console.log(req.path, req.method);
@@ -34,7 +34,7 @@ app.use("/devotion", devotionRoutes);
 app.use("/course", courseController);
 app.use("/quiz", quizController);
 
-app.use("/images", express.static("public/images"));
+// app.use("/images", express.static("public/images"));
 
 app.all("*", (req, res) => {
   res.status(404);

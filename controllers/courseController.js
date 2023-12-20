@@ -3,6 +3,7 @@ const express = require("express");
 const Course = require("../models/Course");
 const courseController = require("express").Router();
 const verifyJWT = require("../middleware/requireAuth");
+const path = require("path");
 
 // image upload
 const storage = multer.diskStorage({
@@ -11,7 +12,11 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const timestamp = new Date().toISOString().replace(/:/g, "-");
-    cb(null, `${timestamp}-${file.originalname}`);
+    const fileExtension = path.extname(file.originalname); // Extract file extension
+    // Extract the base name without target location path
+    const baseFileName = path.basename(file.originalname, fileExtension);
+    // Prepend timestamp and append the original file extension
+    cb(null, `${timestamp}-${baseFileName}${fileExtension}`);
   },
 });
 
@@ -83,48 +88,53 @@ courseController.get("/getchapter/:courseId/:chapterId", async (req, res) => {
   }
 });
 
-// create courses
+//create course
 courseController.post("/create", upload.any(), async (req, res) => {
   const { title, description } = req.body;
-  // Parse the chapters JSON string to an array
+
+  // Create a map for quick file lookups based on the multipart field name
+  const fileMap = req.files.reduce((map, file) => {
+    map[file.fieldname] = file.filename;
+    return map;
+  }, {});
+
   let chapters;
   try {
     chapters = JSON.parse(req.body.chapters);
   } catch (error) {
-    // If there is an error in parsing, return a response immediately
     return res
       .status(400)
       .json({ message: "Invalid chapters format: " + error.message });
   }
 
-  const files = req.files;
-  const imageIds = req.body.imageIds ? JSON.parse(req.body.imageIds) : [];
-
-  const imageElements = imageIds.map((imageId, index) => ({
-    type: "img",
-    id: imageId,
-    value: files[index].filename,
-  }));
-
-  // console.log("Received chapters:", chapters);
-
-  const modifiedChapters = chapters.map((chapter) => ({
+  // Functionality moved inside the POST route
+  const updatedChapters = chapters.map((chapter, chapterIndex) => ({
     ...chapter,
-    slides: chapter.slides.map((slide) => ({
+    slides: chapter.slides.map((slide, slideIndex) => ({
       ...slide,
-      elements: [
-        ...slide.elements,
-        ...imageElements.filter((imgEl) => imgEl.id.startsWith(slide.slide)),
-      ],
+      elements: slide.elements.map((element) => {
+        if (element.type === "img") {
+          const fieldName = `chapter_${chapterIndex}_slide_${slideIndex}_image`;
+          const file = req.files.find((f) => f.fieldname === fieldName);
+          if (file) {
+            return {
+              ...element,
+              value: file.filename, // Correctly reference the filename here
+            };
+          }
+        }
+        return element;
+      }),
     })),
   }));
+  console.log("Request Files:", req.files); // Log uploaded file details
 
   try {
     const newCourse = new Course({
       title,
       description,
-      image: files && files.length > 0 ? files[0].filename : "", // assuming the first image is the course image, if available
-      chapters: modifiedChapters,
+      image: req.files.find((f) => f.fieldname === "image")?.filename || "",
+      chapters: updatedChapters,
     });
 
     await newCourse.save();
