@@ -224,8 +224,6 @@ courseController.delete("/delete/:id", async (req, res) => {
       return res.status(404).json({ message: "Course not found" });
     }
 
-    // Optional: Add logic here if you want to also delete any related files or data.
-
     await Course.deleteOne({ _id: courseId });
     res.status(200).json({ message: "Course deleted successfully" });
   } catch (error) {
