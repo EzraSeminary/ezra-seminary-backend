@@ -214,4 +214,24 @@ courseController.put("/update/:id", upload.any(), async (req, res) => {
   }
 });
 
+// delete a course
+courseController.delete("/delete/:id", async (req, res) => {
+  const courseId = req.params.id;
+
+  try {
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: "Course not found" });
+    }
+
+    // Optional: Add logic here if you want to also delete any related files or data.
+
+    await Course.deleteOne({ _id: courseId });
+    res.status(200).json({ message: "Course deleted successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 module.exports = courseController;
