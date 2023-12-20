@@ -145,4 +145,73 @@ courseController.post("/create", upload.any(), async (req, res) => {
   }
 });
 
+// update course
+courseController.put("/update/:id", upload.any(), async (req, res) => {
+  try {
+    const courseId = req.params.id;
+    const { title, description } = req.body;
+
+    // Start by finding the existing course
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: "Course not found" });
+    }
+
+    // If there are files being uploaded, handle the file upload similarly to the create
+    const fileMap = (req.files || []).reduce((map, file) => {
+      map[file.fieldname] = file.filename;
+      return map;
+    }, {});
+
+    let chapters;
+    try {
+      chapters = JSON.parse(req.body.chapters || "[]");
+    } catch (error) {
+      return res
+        .status(400)
+        .json({ message: "Invalid chapters format: " + error.message });
+    }
+
+    // Process the chapters as done in the create controller
+    const updatedChapters = chapters.map((chapter, chapterIndex) => ({
+      ...chapter,
+      slides: chapter.slides.map((slide, slideIndex) => ({
+        ...slide,
+        elements: slide.elements.map((element) => {
+          if (element.type === "img") {
+            const fieldName = `chapter_${chapterIndex}_slide_${slideIndex}_image`;
+            const file = req.files.find((f) => f.fieldname === fieldName);
+            if (file) {
+              return {
+                ...element,
+                value: file.filename,
+              };
+            }
+          }
+          return element;
+        }),
+      })),
+    }));
+
+    // Update the course properties
+    course.title = title || course.title;
+    course.description = description || course.description;
+    course.chapters =
+      updatedChapters.length > 0 ? updatedChapters : course.chapters;
+
+    // Handle the course image separately
+    const imageFile = req.files.find((f) => f.fieldname === "image");
+    if (imageFile) {
+      course.image = imageFile.filename;
+    }
+
+    // Save the updated course
+    await course.save();
+    res.status(200).json({ message: "Course updated successfully", course });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 module.exports = courseController;
