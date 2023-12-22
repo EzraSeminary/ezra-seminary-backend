@@ -219,7 +219,7 @@ courseController.put("/update/:id", upload.any(), async (req, res) => {
       updatedChapters.length > 0 ? updatedChapters : course.chapters;
 
     // Handle the course image separately
-    const imageFile = req.files.find((f) => f.fieldname === "image");
+    const imageFile = files.find((file) => file.fieldname === "image");
     if (imageFile) {
       course.image = imageFile.filename;
     }
