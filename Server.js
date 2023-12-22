@@ -4,8 +4,8 @@ const express = require("express");
 const app = express();
 const connectDb = require("./config/connectDb");
 const dotenv = require("dotenv").config();
-// const cors = require("cors");
-// const corsOptions = require("./config/corsOptions");
+const cors = require("cors");
+const corsOptions = require("./config/corsOptions");
 const devotionRoutes = require("./routes/devotionRoutes");
 const userRoutes = require("./routes/userRoutes");
 const path = require("path");
@@ -17,7 +17,7 @@ app.use(express.json({ limit: "50mb" }));
 
 connectDb();
 
-// app.use(cors(corsOptions));
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
