@@ -17,7 +17,7 @@ app.use(express.json({ limit: "50mb" }));
 
 connectDb();
 
-app.use(cors(corsOptions));
+// app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
