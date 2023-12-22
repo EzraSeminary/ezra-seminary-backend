@@ -91,20 +91,29 @@ courseController.get("/getchapter/:courseId/:chapterId", async (req, res) => {
 //create course
 courseController.post("/create", upload.any(), async (req, res) => {
   const { title, description } = req.body;
+  const files = req.files || [];
 
   // Create a map for quick file lookups based on the multipart field name
-  const fileMap = req.files.reduce((map, file) => {
-    map[file.fieldname] = file.filename;
-    return map;
-  }, {});
+  const fileMap =
+    req.files && req.files.length > 0
+      ? req.files.reduce((map, file) => {
+          map[file.fieldname] = file.filename;
+          return map;
+        }, {})
+      : {};
 
   let chapters;
   try {
-    chapters = JSON.parse(req.body.chapters);
+    // Ensure chapters is being sent as a string, and then parse it.
+    // If chapters are being sent as object, we need to handle parsing manually.
+    if (typeof req.body.chapters === "string") {
+      chapters = JSON.parse(req.body.chapters);
+    } else {
+      // Handle the case where chapters is already an object, probably due to 'multipart/form-data' being used.
+      chapters = req.body.chapters; // Potentially already parsed by middleware
+    }
   } catch (error) {
-    return res
-      .status(400)
-      .json({ message: "Invalid chapters format: " + error.message });
+    return res.status(400).json({ message: error.message });
   }
 
   // Functionality moved inside the POST route
@@ -129,11 +138,15 @@ courseController.post("/create", upload.any(), async (req, res) => {
   }));
   console.log("Request Files:", req.files); // Log uploaded file details
 
+  // Use files variable instead of req.files directly
+  const imageFile = files.find((file) => file.fieldname === "image");
+  const imageFileName = imageFile ? imageFile.filename : "";
+
   try {
     const newCourse = new Course({
       title,
       description,
-      image: req.files.find((f) => f.fieldname === "image")?.filename || "",
+      image: imageFileName,
       chapters: updatedChapters,
     });
 
@@ -150,6 +163,7 @@ courseController.put("/update/:id", upload.any(), async (req, res) => {
   try {
     const courseId = req.params.id;
     const { title, description } = req.body;
+    const files = req.files || [];
 
     // Start by finding the existing course
     const course = await Course.findById(courseId);
@@ -158,18 +172,23 @@ courseController.put("/update/:id", upload.any(), async (req, res) => {
     }
 
     // If there are files being uploaded, handle the file upload similarly to the create
-    const fileMap = (req.files || []).reduce((map, file) => {
-      map[file.fieldname] = file.filename;
-      return map;
-    }, {});
+    const fileMap =
+      req.files && req.files.length > 0
+        ? req.files.reduce((map, file) => {
+            map[file.fieldname] = file.filename;
+            return map;
+          }, {})
+        : {};
 
     let chapters;
     try {
-      chapters = JSON.parse(req.body.chapters || "[]");
+      if (typeof req.body.chapters === "string") {
+        chapters = JSON.parse(req.body.chapters || "[]");
+      } else {
+        chapters = req.body.chapters;
+      }
     } catch (error) {
-      return res
-        .status(400)
-        .json({ message: "Invalid chapters format: " + error.message });
+      return res.status(400).json({ message: error.message });
     }
 
     // Process the chapters as done in the create controller
