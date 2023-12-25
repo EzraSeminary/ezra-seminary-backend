@@ -13,6 +13,8 @@ const courseController = require("./controllers/courseController");
 const quizController = require("./controllers/quizController");
 const requireAuth = require("./middleware/requireAuth");
 
+app.use(history());
+
 app.use(express.json({ limit: "50mb" }));
 
 connectDb();
