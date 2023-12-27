@@ -1,7 +1,7 @@
 // app.js
 
 const express = require("express");
-const history = require("connect-history-api-fallback");
+// const history = require("connect-history-api-fallback");
 const app = express();
 const connectDb = require("./config/connectDb");
 const dotenv = require("dotenv").config();
@@ -14,7 +14,7 @@ const courseController = require("./controllers/courseController");
 const quizController = require("./controllers/quizController");
 const requireAuth = require("./middleware/requireAuth");
 
-app.use(history());
+// app.use(history());
 
 app.use(express.json({ limit: "50mb" }));
 
@@ -37,7 +37,6 @@ app.use("/course", courseController);
 app.use("/quiz", quizController);
 
 // app.use("/images", express.static("public/images"));
-
 app.all("*", (req, res) => {
   res.status(404);
   if (req.accepts("html")) {
