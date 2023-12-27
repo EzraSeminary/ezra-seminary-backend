@@ -1,7 +1,7 @@
 // app.js
 
 const express = require("express");
-// const history = require("connect-history-api-fallback");
+
 const app = express();
 const connectDb = require("./config/connectDb");
 const dotenv = require("dotenv").config();
