@@ -6,6 +6,7 @@ const allowedOrigins = [
   "http://localhost:5175",
   "https://ezra-test-frontend.onrender.com",
   "https://ezra-test-frontend.onrender.com/",
+  "https://sage-cassata-4d464e.netlify.app'",
 ];
 
 // // const allowedOrigins = "*";
