@@ -14,6 +14,7 @@ const courseController = require("./controllers/courseController");
 const quizController = require("./controllers/quizController");
 const requireAuth = require("./middleware/requireAuth");
 
+
 app.use(express.json({ limit: "50mb" }));
 
 connectDb();
@@ -35,27 +36,17 @@ app.use("/course", courseController);
 app.use("/quiz", quizController);
 
 // app.use("/images", express.static("public/images"));
-// app.all("*", (req, res) => {
-//   res.status(404);
-//   if (req.accepts("html")) {
-//     res.sendFile(path.join(__dirname, "views", "404.html"));
-//   } else if (req.accepts("json")) {
-//     res.json({ message: "404 Not Found" });
-//   } else {
-//     res.type("txt").send("404 Not Found");
-//   }
-// });
-
-// Serve static files from the React app
-app.use(express.static(path.join(__dirname, "../../ezra-test-frontend/dist")));
-
-// The "catchall" handler: for any request that doesn't
-// match one above, send back React's index.html file.
-app.get("*", (req, res) => {
-  res.sendFile(
-    path.join(__dirname, "../../ezra-test-frontend/dist", "index.html")
-  );
+app.all("*", (req, res) => {
+  res.status(404);
+  if (req.accepts("html")) {
+    res.sendFile(path.join(__dirname, "views", "404.html"));
+  } else if (req.accepts("json")) {
+    res.json({ message: "404 Not Found" });
+  } else {
+    res.type("txt").send("404 Not Found");
+  }
 });
+
 // listen for requests
 app.listen(process.env.PORT, () => {
   console.log("connected to the database");
