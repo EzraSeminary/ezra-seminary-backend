@@ -9,7 +9,7 @@ const allowedOrigins = [
   "https://ezra-test-frontend.onrender.com/",
   "https://sage-cassata-4d464e.netlify.app",
   "https://deployement--sage-cassata-4d464e.netlify.app",
-  "*",
+  "https://ezraseminary.netlify.app",
 ];
 
 // const allowedOrigins = "*";
