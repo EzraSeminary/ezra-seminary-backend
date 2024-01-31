@@ -1,6 +1,7 @@
 // app.js
 
 const express = require("express");
+
 const app = express();
 const connectDb = require("./config/connectDb");
 const dotenv = require("dotenv").config();
@@ -13,8 +14,8 @@ const courseController = require("./controllers/courseController");
 const quizController = require("./controllers/quizController");
 const requireAuth = require("./middleware/requireAuth");
 
+
 app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ limit: "50mb" }));
 
 connectDb();
 
@@ -35,7 +36,6 @@ app.use("/course", courseController);
 app.use("/quiz", quizController);
 
 // app.use("/images", express.static("public/images"));
-
 app.all("*", (req, res) => {
   res.status(404);
   if (req.accepts("html")) {
@@ -52,3 +52,5 @@ app.listen(process.env.PORT, () => {
   console.log("connected to the database");
   console.log(`Server is listening on port ${process.env.PORT}`);
 });
+
+module.exports = app;
