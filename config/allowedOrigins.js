@@ -10,6 +10,7 @@ const allowedOrigins = [
   "https://sage-cassata-4d464e.netlify.app",
   "https://deployement--sage-cassata-4d464e.netlify.app",
   "https://ezraseminary.netlify.app",
+  "https://ezraseminary.netlify.app/",
 ];
 
 // const allowedOrigins = "*";
