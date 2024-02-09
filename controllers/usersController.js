@@ -43,7 +43,30 @@ const signupUser = async (req, res) => {
 };
 
 const updateUserProfile = async (req, res) => {
-  console.log(req.body);
+  const user = await User.findById(req.user._id);
+
+  if (user) {
+    user.firstName = req.body.firstName || user.firstName;
+    user.lastName = req.body.lastName || user.lastName;
+    user.email = req.body.email || user.email;
+
+    if (req.body.password) {
+      user.password = req.body.password;
+    }
+    const updateUser = await user.save();
+
+    res.json({
+      _id: updateUser._id,
+      firstName: updateUser.firstName,
+      lastName: updateUser.lastName,
+      email: updateUser.email,
+      role: updateUser.role,
+      token: createToken(updateUser._id),
+    });
+  } else {
+    res.status(404);
+    throw new Error("User not found");
+  }
 };
 
 module.exports = {
