@@ -60,6 +60,19 @@ userSchema.statics.signup = async function (
   return user;
 };
 
+userSchema.pre("save", async function (next) {
+  // Only hash the password if it has been modified (or is new)
+  if (!this.isModified("password")) return next();
+
+  // Hash the password
+  const salt = await bcrypt.genSalt(10);
+  const hash = await bcrypt.hash(this.password, salt);
+
+  // Override the plaintext password with the hashed one
+  this.password = hash;
+  next();
+});
+
 // static login method
 userSchema.statics.login = async function (email, password) {
   // validation
