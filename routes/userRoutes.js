@@ -7,7 +7,6 @@ const {
 } = require("../controllers/usersController");
 // const verifyJWT = require("../middleware/requireAuth");
 const requireAuth = require("../middleware/requireAuth");
-S;
 
 // router.use(verifyJWT)
 
