@@ -42,7 +42,12 @@ const signupUser = async (req, res) => {
   }
 };
 
+const updateUserProfile = async (req, res) => {
+  console.log(req.body);
+};
+
 module.exports = {
   loginUser,
   signupUser,
+  updateUserProfile,
 };

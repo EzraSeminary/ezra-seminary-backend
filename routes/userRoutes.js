@@ -1,7 +1,13 @@
 const express = require("express");
 const router = express.Router();
-const { loginUser, signupUser } = require("../controllers/usersController");
-const verifyJWT = require("../middleware/requireAuth");
+const {
+  loginUser,
+  signupUser,
+  updateUserProfile,
+} = require("../controllers/usersController");
+// const verifyJWT = require("../middleware/requireAuth");
+const requireAuth = require("../middleware/requireAuth");
+S;
 
 // router.use(verifyJWT)
 
@@ -15,5 +21,6 @@ const verifyJWT = require("../middleware/requireAuth");
 router.post("/login", loginUser);
 //signup route
 router.post("/signup", signupUser);
+router.route("/profile").post(requireAuth, updateUserProfile);
 
 module.exports = router;
