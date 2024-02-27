@@ -18,7 +18,7 @@ const { createDevotion, getDevotions, deleteDevotion, updateDevotion } =
 
 router.route("/create").post(upload.single("image"), createDevotion);
 
-router.route("/show").get(verifyJWT, getDevotions);
+router.route("/show").get(getDevotions);
 
 router.route("/:id").delete(verifyJWT, requireAdmin, deleteDevotion);
 router
