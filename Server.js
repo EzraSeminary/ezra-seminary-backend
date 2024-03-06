@@ -20,7 +20,13 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-        "img-src": ["'self'", "ezra-seminary.mybese.tech", "data:"],
+        "img-src": [
+          "'self'",
+          "ezra-seminary.mybese.tech",
+          "localhost:5173",
+          "localhost:5174",
+          "data:",
+        ],
       },
     },
   })
