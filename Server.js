@@ -1,6 +1,7 @@
 // app.js
 
 const express = require("express");
+const helmet = require("helmet");
 
 const app = express();
 const connectDb = require("./config/connectDb");
@@ -14,7 +15,7 @@ const courseController = require("./controllers/courseController");
 const quizController = require("./controllers/quizController");
 const requireAuth = require("./middleware/requireAuth");
 
-
+app.use(helmet());
 app.use(express.json({ limit: "50mb" }));
 
 connectDb();
@@ -48,9 +49,10 @@ app.all("*", (req, res) => {
 });
 
 // listen for requests
-app.listen(process.env.PORT, () => {
+app.listen(5100, () => {
   console.log("connected to the database");
-  console.log(`Server is listening on port ${process.env.PORT}`);
+  console.log(`Server is listening on port 5100`);
 });
 
 module.exports = app;
+
