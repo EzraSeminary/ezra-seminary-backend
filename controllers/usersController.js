@@ -56,16 +56,17 @@ const updateUserProfile = async (req, res) => {
 
     if (req.body.password) {
       user.password = req.body.password;
+      user.markModified("password");
     }
-    const updateUser = await user.save();
+
+    const updatedUser = await user.save();
 
     res.json({
-      _id: updateUser._id,
-      firstName: updateUser.firstName,
-      lastName: updateUser.lastName,
-      email: updateUser.email,
-      role: updateUser.role,
-      token: createToken(updateUser._id),
+      _id: updatedUser._id,
+      firstName: updatedUser.firstName,
+      lastName: updatedUser.lastName,
+      email: updatedUser.email,
+      token: generateToken(updatedUser._id),
     });
   } else {
     res.status(404);
