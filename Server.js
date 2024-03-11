@@ -65,7 +65,6 @@ app.all("*", (req, res) => {
 
 // listen for requests
 app.listen(process.env.PORT, () => {
-  console.log("connected to the database");
   console.log(`Server is listening on port ${process.env.PORT}`);
 });
 
