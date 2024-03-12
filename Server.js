@@ -50,7 +50,6 @@ app.all("*", (req, res) => {
 app.listen(5100, () => {
   console.log("connected to the database");
   console.log(`Server is listening on port 5100`);
-});
 
 module.exports = app;
 
