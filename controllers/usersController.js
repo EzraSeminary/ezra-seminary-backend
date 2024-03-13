@@ -1,5 +1,6 @@
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
+const upload = require("../middleware/upload");
 
 // Create JWT
 const createToken = (_id) => {
@@ -53,6 +54,7 @@ const updateUserProfile = async (req, res) => {
     user.firstName = req.body.firstName || user.firstName;
     user.lastName = req.body.lastName || user.lastName;
     user.email = req.body.email || user.email;
+    user.avatar = req.file ? req.file.filename : user.avatar;
 
     if (req.body.password) {
       user.password = req.body.password;
@@ -64,6 +66,7 @@ const updateUserProfile = async (req, res) => {
       firstName: updateUser.firstName,
       lastName: updateUser.lastName,
       email: updateUser.email,
+      avatar: updateUser.avatar,
       role: updateUser.role,
       token: createToken(updateUser._id),
     });
