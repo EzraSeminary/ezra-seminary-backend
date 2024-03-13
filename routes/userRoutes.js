@@ -5,8 +5,8 @@ const {
   signupUser,
   updateUserProfile,
 } = require("../controllers/usersController");
-// const verifyJWT = require("../middleware/requireAuth");
 const requireAuth = require("../middleware/requireAuth");
+const upload = require("../middleware/upload"); // Add this line
 
 // router.use(verifyJWT)
 
@@ -20,6 +20,8 @@ const requireAuth = require("../middleware/requireAuth");
 router.post("/login", loginUser);
 //signup route
 router.post("/signup", signupUser);
-router.route("/profile").post(requireAuth, updateUserProfile);
+router
+  .route("/profile")
+  .post(requireAuth, upload.single("avatar"), updateUserProfile); // Modify this line
 
 module.exports = router;
