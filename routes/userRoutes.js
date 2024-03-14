@@ -8,20 +8,12 @@ const {
 const requireAuth = require("../middleware/requireAuth");
 const upload = require("../middleware/upload"); // Add this line
 
-// router.use(verifyJWT)
-
-// router.route('/')
-//     .get(usersController.getAllUsers)
-//     .post(usersController.createNewUser)
-//     .patch(usersController.updateUser)
-//     .delete(usersController.deleteUser)
-
 //login route
 router.post("/login", loginUser);
 //signup route
 router.post("/signup", signupUser);
 router
   .route("/profile")
-  .post(requireAuth, upload.single("avatar"), updateUserProfile); // Modify this line
+  .put(requireAuth, upload.single("avatar"), updateUserProfile);
 
 module.exports = router;

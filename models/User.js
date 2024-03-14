@@ -14,7 +14,7 @@ const userSchema = new Schema({
     enum: ["Learner", "Admin"], // Enum to restrict the value to 'user' or 'admin'
     default: "Learner", // Default role assigned if none is specified
   },
-  avatar: { type: String, default: "default-avatar.jpg" }, // Add this line
+  avatar: { type: String, default: "mehari.jpg" }, // Add this line
 });
 
 //static signup method

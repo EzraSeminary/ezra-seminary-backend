@@ -54,7 +54,10 @@ const updateUserProfile = async (req, res) => {
     user.firstName = req.body.firstName || user.firstName;
     user.lastName = req.body.lastName || user.lastName;
     user.email = req.body.email || user.email;
+    // user.avatar = req.file ? `/images/${req.file.filename}` : user.avatar; // mukera 1
     user.avatar = req.file ? req.file.filename : user.avatar;
+
+    console.log(req.file);
 
     if (req.body.password) {
       user.password = req.body.password;
