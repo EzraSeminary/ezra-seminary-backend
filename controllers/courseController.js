@@ -90,7 +90,7 @@ courseController.get("/getchapter/:courseId/:chapterId", async (req, res) => {
 
 //create course
 courseController.post("/create", upload.any(), async (req, res) => {
-  const { title, description } = req.body;
+  const { title, description, published } = req.body;
   const files = req.files || [];
 
   // Create a map for quick file lookups based on the multipart field name
@@ -148,6 +148,7 @@ courseController.post("/create", upload.any(), async (req, res) => {
       description,
       image: imageFileName,
       chapters: updatedChapters,
+      published,
     });
 
     await newCourse.save();
@@ -162,7 +163,7 @@ courseController.post("/create", upload.any(), async (req, res) => {
 courseController.put("/update/:id", upload.any(), async (req, res) => {
   try {
     const courseId = req.params.id;
-    const { title, description } = req.body;
+    const { title, description, published } = req.body;
     const files = req.files || [];
 
     // Start by finding the existing course
@@ -215,6 +216,7 @@ courseController.put("/update/:id", upload.any(), async (req, res) => {
     // Update the course properties
     course.title = title || course.title;
     course.description = description || course.description;
+    course.published = published || course.published;
     course.chapters =
       updatedChapters.length > 0 ? updatedChapters : course.chapters;
 
