@@ -1,5 +1,6 @@
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
+const upload = require("../middleware/upload");
 
 // Create JWT
 const createToken = (_id) => {
@@ -22,6 +23,7 @@ const loginUser = async (req, res) => {
       firstName: user.firstName,
       lastName: user.lastName,
       role: user.role,
+      avatar: user.avatar,
     });
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -53,6 +55,10 @@ const updateUserProfile = async (req, res) => {
     user.firstName = req.body.firstName || user.firstName;
     user.lastName = req.body.lastName || user.lastName;
     user.email = req.body.email || user.email;
+    // user.avatar = req.file ? `/images/${req.file.filename}` : user.avatar; // mukera 1
+    user.avatar = req.file ? req.file.filename : user.avatar;
+
+    console.log(req.file);
 
     if (req.body.password) {
       user.password = req.body.password;
@@ -64,6 +70,7 @@ const updateUserProfile = async (req, res) => {
       firstName: updateUser.firstName,
       lastName: updateUser.lastName,
       email: updateUser.email,
+      avatar: updateUser.avatar,
       role: updateUser.role,
       token: createToken(updateUser._id),
     });

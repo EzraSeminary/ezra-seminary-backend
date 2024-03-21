@@ -5,21 +5,15 @@ const {
   signupUser,
   updateUserProfile,
 } = require("../controllers/usersController");
-// const verifyJWT = require("../middleware/requireAuth");
 const requireAuth = require("../middleware/requireAuth");
-
-// router.use(verifyJWT)
-
-// router.route('/')
-//     .get(usersController.getAllUsers)
-//     .post(usersController.createNewUser)
-//     .patch(usersController.updateUser)
-//     .delete(usersController.deleteUser)
+const upload = require("../middleware/upload"); // Add this line
 
 //login route
 router.post("/login", loginUser);
 //signup route
 router.post("/signup", signupUser);
-router.route("/profile").post(requireAuth, updateUserProfile);
+router
+  .route("/profile")
+  .put(requireAuth, upload.single("avatar"), updateUserProfile);
 
 module.exports = router;
