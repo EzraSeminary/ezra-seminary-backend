@@ -44,6 +44,9 @@ const CourseSchema = new mongoose.Schema(
     chapters: {
       type: [chapterSchema],
     },
+    published: {
+      type: Boolean,
+    },
   },
   { timestamps: true }
 );
