@@ -23,6 +23,18 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/images", express.static(path.join(__dirname, "public/images")));
+app.get("/download/:imageName", (req, res) => {
+  const imageName = req.params.imageName;
+  const imagePath = path.join(__dirname, "public", "images", imageName);
+
+  res.download(imagePath, (err) => {
+    if (err) {
+      console.error("Error downloading image:", err);
+      res.status(500).send("Error downloading image");
+    }
+  });
+});
+
 app.use("/", require("./routes/root"));
 // app.use((req, res, next) => {
 //   console.log(req.path, req.method);
