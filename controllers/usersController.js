@@ -63,6 +63,13 @@ const updateUserProfile = async (req, res) => {
     if (req.body.password) {
       user.password = req.body.password;
     }
+    if (req.body.progress) {
+      user.progress = req.body.progress;
+    }
+
+    if (req.body.achievement) {
+      user.achievement = req.body.achievement;
+    }
     const updateUser = await user.save();
 
     res.json({
@@ -72,6 +79,8 @@ const updateUserProfile = async (req, res) => {
       email: updateUser.email,
       avatar: updateUser.avatar,
       role: updateUser.role,
+      progress: updateUser.progress,
+      achievement: updateUser.achievement,
       token: createToken(updateUser._id),
     });
   } else {
