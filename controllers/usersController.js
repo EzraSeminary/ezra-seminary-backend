@@ -66,7 +66,6 @@ const updateUserProfile = async (req, res) => {
     if (req.body.progress) {
       user.progress = req.body.progress;
     }
-
     if (req.body.achievement) {
       user.achievement = req.body.achievement;
     }
