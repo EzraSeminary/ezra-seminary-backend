@@ -15,5 +15,6 @@ router.post("/signup", signupUser);
 router
   .route("/profile")
   .put(requireAuth, upload.single("avatar"), updateUserProfile);
+router.get("/get", getUserById);
 
 module.exports = router;

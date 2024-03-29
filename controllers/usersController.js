@@ -88,6 +88,8 @@ const updateUserProfile = async (req, res) => {
   }
 };
 
+const getUserById = async (req, res) => {};
+
 module.exports = {
   loginUser,
   signupUser,
