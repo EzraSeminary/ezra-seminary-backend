@@ -88,10 +88,31 @@ const updateUserProfile = async (req, res) => {
   }
 };
 
-const getUserById = async (req, res) => {};
+const getUserById = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id); // assuming that :id is the route parameter
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    res.status(200).json({
+      _id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      role: user.role,
+      avatar: user.avatar,
+      progress: user.progress,
+      achievement: user.achievement,
+    });
+  } catch (error) {
+    // If the ID format is invalid or an error occurs
+    res.status(500).json({ error: error.message });
+  }
+};
 
 module.exports = {
   loginUser,
   signupUser,
   updateUserProfile,
+  getUserById,
 };
