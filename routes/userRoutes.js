@@ -4,6 +4,7 @@ const {
   loginUser,
   signupUser,
   updateUserProfile,
+  getUserById,
 } = require("../controllers/usersController");
 const requireAuth = require("../middleware/requireAuth");
 const upload = require("../middleware/upload"); // Add this line
