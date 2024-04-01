@@ -110,9 +110,40 @@ const getUserById = async (req, res) => {
   }
 };
 
+// Update User Progress Controller
+const updateUserProgress = async (req, res) => {
+  const { progress } = req.body;
+  const userId = req.user._id;
+
+  try {
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    user.progress = progress;
+
+    const updatedUser = await user.save();
+
+    res.json({
+      _id: updatedUser._id,
+      firstName: updatedUser.firstName,
+      lastName: updatedUser.lastName,
+      email: updatedUser.email,
+      role: updatedUser.role,
+      avatar: updatedUser.avatar,
+      progress: updatedUser.progress,
+      achievement: updatedUser.achievement,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   loginUser,
   signupUser,
   updateUserProfile,
   getUserById,
+  updateUserProgress,
 };
