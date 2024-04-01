@@ -80,8 +80,18 @@ const updateUserProfile = async (req, res) => {
   }
 };
 
+const getUsers = async (req, res) => {
+  try {
+    const users = await User.find({}, { password: 0 }); // Exclude the password field
+    res.status(200).json(users);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
 module.exports = {
   loginUser,
   signupUser,
   updateUserProfile,
+  getUsers, // Add this line
 };
