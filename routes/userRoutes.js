@@ -4,7 +4,8 @@ const {
   loginUser,
   signupUser,
   updateUserProfile,
-  getUsers, // Add this line
+  getUsers,
+  deleteUser, // Add this line
 } = require("../controllers/usersController");
 const requireAuth = require("../middleware/requireAuth");
 const upload = require("../middleware/upload");
@@ -17,5 +18,6 @@ router
   .route("/profile")
   .put(requireAuth, upload.single("avatar"), updateUserProfile);
 router.get("/", getUsers); // Add this line
+router.delete("/:id", deleteUser);
 
 module.exports = router;
