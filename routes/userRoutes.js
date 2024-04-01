@@ -5,6 +5,7 @@ const {
   signupUser,
   updateUserProfile,
   getUserById,
+  updateUserProgress,
 } = require("../controllers/usersController");
 const requireAuth = require("../middleware/requireAuth");
 const upload = require("../middleware/upload"); // Add this line
@@ -17,5 +18,6 @@ router
   .route("/profile")
   .put(requireAuth, upload.single("avatar"), updateUserProfile);
 router.get("/get/:id", getUserById);
+router.put("/progress", requireAuth, updateUserProgress);
 
 module.exports = router;
