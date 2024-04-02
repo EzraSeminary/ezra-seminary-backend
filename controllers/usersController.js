@@ -32,8 +32,8 @@ const loginUser = async (req, res) => {
 
 // Signup Controller
 const signupUser = async (req, res) => {
-  const { firstName, lastName, email, password } = req.body;
-  const avatar = req.file ? req.file.filename : null; // Get the avatar file from req.file
+  const { firstName, lastName, email, password, avatar } = req.body;
+  // const avatar = req.file ? req.file.filename : null; // Get the avatar file from req.file
 
   try {
     const user = await User.signup(
