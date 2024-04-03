@@ -142,10 +142,35 @@ const updateUserProgress = async (req, res) => {
   }
 };
 
+const getCurrentUser = async (req, res) => {
+  const userId = req.user._id; // getting user id from the token
+
+  try {
+    const user = await User.findById(userId).select("-password"); // Exclude password from the result
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.status(200).json({
+      _id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      avatar: user.avatar,
+      role: user.role,
+      progress: user.progress,
+      achievement: user.achievement,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   loginUser,
   signupUser,
   updateUserProfile,
   getUserById,
   updateUserProgress,
+  getCurrentUser,
 };
