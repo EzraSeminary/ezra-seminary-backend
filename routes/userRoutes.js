@@ -13,7 +13,7 @@ const upload = require("../middleware/upload");
 //login route
 router.post("/login", loginUser);
 //signup route
-router.post("/signup", signupUser);
+router.post("/signup", upload.single("avatar"), signupUser);
 router
   .route("/profile")
   .put(requireAuth, upload.single("avatar"), updateUserProfile);

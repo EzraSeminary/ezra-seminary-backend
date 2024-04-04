@@ -61,6 +61,7 @@ const signupUser = async (req, res) => {
       role: user.role,
       avatar: user.avatar, // Include the avatar in the response
     });
+    console.log(user.avatar);
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -74,6 +75,11 @@ const updateUserProfile = async (req, res) => {
     user.lastName = req.body.lastName || user.lastName;
     user.email = req.body.email || user.email;
     user.avatar = req.file ? req.file.filename : user.avatar;
+
+    if (req.file) {
+      // File was uploaded successfully
+      user.avatar = req.file.filename;
+    }
 
     if (req.body.password) {
       user.password = req.body.password;
