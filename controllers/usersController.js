@@ -32,8 +32,13 @@ const loginUser = async (req, res) => {
 
 // Signup Controller
 const signupUser = async (req, res) => {
-  const { firstName, lastName, email, password, avatar } = req.body;
-  // const avatar = req.file ? req.file.filename : null; // Get the avatar file from req.file
+  const { firstName, lastName, email, password, role } = req.body;
+  let avatar = "default-avatar.jpg"; // Set a default avatar
+
+  if (req.file) {
+    // File was uploaded successfully
+    avatar = req.file.filename;
+  }
 
   try {
     const user = await User.signup(
@@ -41,8 +46,9 @@ const signupUser = async (req, res) => {
       lastName,
       email,
       password,
+      role,
       avatar
-    ); // Pass the avatar to the signup method
+    );
 
     // create token
     const token = createToken(user._id);
@@ -67,24 +73,22 @@ const updateUserProfile = async (req, res) => {
     user.firstName = req.body.firstName || user.firstName;
     user.lastName = req.body.lastName || user.lastName;
     user.email = req.body.email || user.email;
-    // user.avatar = req.file ? `/images/${req.file.filename}` : user.avatar; // mukera 1
     user.avatar = req.file ? req.file.filename : user.avatar;
-
-    console.log(req.file);
 
     if (req.body.password) {
       user.password = req.body.password;
     }
-    const updateUser = await user.save();
+
+    const updatedUser = await user.save();
 
     res.json({
-      _id: updateUser._id,
-      firstName: updateUser.firstName,
-      lastName: updateUser.lastName,
-      email: updateUser.email,
-      avatar: updateUser.avatar,
-      role: updateUser.role,
-      token: createToken(updateUser._id),
+      _id: updatedUser._id,
+      firstName: updatedUser.firstName,
+      lastName: updatedUser.lastName,
+      email: updatedUser.email,
+      avatar: updatedUser.avatar,
+      role: updatedUser.role,
+      token: createToken(updatedUser._id),
     });
   } else {
     res.status(404);
