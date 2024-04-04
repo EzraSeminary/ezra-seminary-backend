@@ -114,6 +114,11 @@ const getUserById = async (req, res) => {
 
 // Update User Progress Controller
 const updateUserProgress = async (req, res) => {
+  console.log("req.user:", req.user);
+  if (!req.user) {
+    return res.status(401).json({ error: "User must be logged in." });
+  }
+
   const { progress } = req.body;
   const userId = req.user._id;
 
