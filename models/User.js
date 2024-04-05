@@ -14,8 +14,18 @@ const userSchema = new Schema({
     enum: ["Learner", "Admin"], // Enum to restrict the value to 'user' or 'admin'
     default: "Learner", // Default role assigned if none is specified
   },
-  avatar: { type: String, default: "mehari.jpg" }, // Add this line
+  avatar: { type: String, default: "default-avatar.jpg" }, // Add this line
+  progress: [
+    {
+      courseId: { type: String, required: true },
+      currentChapter: { type: Number, default: 0 },
+      currentSlide: { type: Number, default: 0 },
+    },
+  ],
+  achievement: { type: Number, default: 0 },
 });
+
+userSchema.index({ email: 1 }, { unique: true }); // Create index for email field with unique set
 
 //static signup method
 userSchema.statics.signup = async function (
@@ -23,7 +33,8 @@ userSchema.statics.signup = async function (
   lastName,
   email,
   password,
-  role = "Learner"
+  role = "Learner",
+  avatar = "default-avatar.jpg"
 ) {
   // validation
   if (!firstName || !lastName || !email || !password) {
@@ -42,8 +53,9 @@ userSchema.statics.signup = async function (
     throw Error("Email already in use");
   }
   // use bcrypt to hash the password
-  const salt = await bcrypt.genSalt(10);
-  const hash = await bcrypt.hash(password, salt);
+  // const salt = await bcrypt.genSalt(10);
+  // const hash = await bcrypt.hash(password, salt);
+  // console.log(password);
 
   // Ensure the role is either 'user' or 'admin'
   if (!["Learner", "Admin"].includes(role)) {
@@ -54,8 +66,10 @@ userSchema.statics.signup = async function (
     firstName,
     lastName,
     email,
-    password: hash,
+    // password: hash,
+    password,
     role,
+    avatar,
   });
 
   return user;

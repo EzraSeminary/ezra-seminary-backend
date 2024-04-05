@@ -4,6 +4,9 @@ const {
   loginUser,
   signupUser,
   updateUserProfile,
+  getUserById,
+  updateUserProgress,
+  getCurrentUser,
   getUsers,
   deleteUser, // Add this line
 } = require("../controllers/usersController");
@@ -13,10 +16,13 @@ const upload = require("../middleware/upload");
 //login route
 router.post("/login", loginUser);
 //signup route
-router.post("/signup", signupUser);
+router.post("/signup", upload.single("avatar"), signupUser);
 router
-  .route("/profile")
+  .route("/profile/:id")
   .put(requireAuth, upload.single("avatar"), updateUserProfile);
+router.get("/get/:id", getUserById);
+router.put("/progress", requireAuth, updateUserProgress);
+router.get("/current", requireAuth, getCurrentUser);
 router.get("/", getUsers); // Add this line
 router.delete("/:id", deleteUser);
 

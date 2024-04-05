@@ -4,6 +4,7 @@ const User = require("../models/User");
 const requireAuth = async (req, res, next) => {
   //verify user is authenticated
   const { authorization } = req.headers;
+  console.log("Authorization:", authorization);
   if (!authorization) {
     return res.status(401).json({ error: "Authorization token required" });
   }
@@ -12,14 +13,19 @@ const requireAuth = async (req, res, next) => {
 
   try {
     const { _id } = jwt.verify(token, process.env.SECRET);
-    // Select the user's role along with their _id
     const user = await User.findOne({ _id }).select("_id role");
+    console.log("User from token:", user);
     if (!user) {
       return res.status(401).json({ error: "Authorization token is invalid" });
     }
-    // Add the user object to the request object
-    req.user = user;
-    next();
+
+    // Check if the user is an admin
+    if (user.role === "Admin") {
+      req.user = user;
+      next();
+    } else {
+      return res.status(403).json({ error: "Forbidden" });
+    }
   } catch (error) {
     console.log(error);
     res.status(401).json({ error: "Request is not authorized" });
