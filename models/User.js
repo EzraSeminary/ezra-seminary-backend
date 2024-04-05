@@ -15,6 +15,14 @@ const userSchema = new Schema({
     default: "Learner", // Default role assigned if none is specified
   },
   avatar: { type: String, default: "default-avatar.jpg" }, // Add this line
+  progress: [
+    {
+      courseId: { type: String, required: true },
+      currentChapter: { type: Number, default: 0 },
+      currentSlide: { type: Number, default: 0 },
+    },
+  ],
+  achievement: { type: Number, default: 0 },
 });
 
 userSchema.index({ email: 1 }, { unique: true }); // Create index for email field with unique set
