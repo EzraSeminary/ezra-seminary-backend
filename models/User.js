@@ -17,6 +17,8 @@ const userSchema = new Schema({
   avatar: { type: String, default: "default-avatar.jpg" }, // Add this line
 });
 
+userSchema.index({ email: 1 }, { unique: true }); // Create index for email field with unique set
+
 //static signup method
 userSchema.statics.signup = async function (
   firstName,

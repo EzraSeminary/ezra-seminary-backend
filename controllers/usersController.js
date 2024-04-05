@@ -68,7 +68,8 @@ const signupUser = async (req, res) => {
 };
 
 const updateUserProfile = async (req, res) => {
-  const user = await User.findById(req.user._id);
+  const userId = req.params.id; // Get the user ID from the request parameters
+  const user = await User.findById(userId);
 
   if (user) {
     user.firstName = req.body.firstName || user.firstName;

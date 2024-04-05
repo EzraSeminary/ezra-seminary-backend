@@ -15,7 +15,7 @@ router.post("/login", loginUser);
 //signup route
 router.post("/signup", upload.single("avatar"), signupUser);
 router
-  .route("/profile")
+  .route("/profile/:id")
   .put(requireAuth, upload.single("avatar"), updateUserProfile);
 router.get("/", getUsers); // Add this line
 router.delete("/:id", deleteUser);
