@@ -16,9 +16,9 @@ const upload = require("../middleware/upload");
 //login route
 router.post("/login", loginUser);
 //signup route
-router.post("/signup", signupUser);
+router.post("/signup", upload.single("avatar"), signupUser);
 router
-  .route("/profile")
+  .route("/profile/:id")
   .put(requireAuth, upload.single("avatar"), updateUserProfile);
 router.get("/get/:id", getUserById);
 router.put("/progress", requireAuth, updateUserProgress);
