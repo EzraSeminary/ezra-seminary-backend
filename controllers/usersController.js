@@ -35,16 +35,28 @@ const loginUser = async (req, res) => {
 // Signup Controller
 const signupUser = async (req, res) => {
   const { firstName, lastName, email, password } = req.body;
+  const avatar = req.file ? req.file.filename : null; // Get the avatar file from req.file
 
   try {
-    const user = await User.signup(firstName, lastName, email, password);
+    const user = await User.signup(
+      firstName,
+      lastName,
+      email,
+      password,
+      avatar
+    ); // Pass the avatar to the signup method
 
     // create token
     const token = createToken(user._id);
 
-    res
-      .status(200)
-      .json({ firstName, lastName, email, token, role: user.role });
+    res.status(200).json({
+      firstName,
+      lastName,
+      email,
+      token,
+      role: user.role,
+      avatar: user.avatar, // Include the avatar in the response
+    });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -173,6 +185,29 @@ const getCurrentUser = async (req, res) => {
   }
 };
 
+const getUsers = async (req, res) => {
+  try {
+    const users = await User.find({}, { password: 0 }); // Exclude the password field
+    res.status(200).json(users);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+const deleteUser = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    await user.deleteOne();
+    res.json({ message: "User deleted successfully" });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
 module.exports = {
   loginUser,
   signupUser,
@@ -180,4 +215,6 @@ module.exports = {
   getUserById,
   updateUserProgress,
   getCurrentUser,
+  getUsers,
+  deleteUser,
 };

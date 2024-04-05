@@ -7,9 +7,11 @@ const {
   getUserById,
   updateUserProgress,
   getCurrentUser,
+  getUsers,
+  deleteUser, // Add this line
 } = require("../controllers/usersController");
 const requireAuth = require("../middleware/requireAuth");
-const upload = require("../middleware/upload"); // Add this line
+const upload = require("../middleware/upload");
 
 //login route
 router.post("/login", loginUser);
@@ -21,5 +23,7 @@ router
 router.get("/get/:id", getUserById);
 router.put("/progress", requireAuth, updateUserProgress);
 router.get("/current", requireAuth, getCurrentUser);
+router.get("/", getUsers); // Add this line
+router.delete("/:id", deleteUser);
 
 module.exports = router;
