@@ -141,6 +141,7 @@ const updateUserProgress = async (req, res) => {
       avatar: updatedUser.avatar,
       progress: updatedUser.progress,
       achievement: updatedUser.achievement,
+      token: createToken(updatedUser._id),
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -165,6 +166,7 @@ const getCurrentUser = async (req, res) => {
       role: user.role,
       progress: user.progress,
       achievement: user.achievement,
+      token: createToken(user._id),
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
