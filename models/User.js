@@ -68,7 +68,7 @@ userSchema.statics.signup = async function (
     email,
     // password: hash,
     password,
-    role,
+    role: role || "Learner",
     avatar,
   });
 

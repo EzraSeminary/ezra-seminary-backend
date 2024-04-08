@@ -86,6 +86,7 @@ const updateUserProfile = async (req, res) => {
       user.lastName = req.body.lastName || user.lastName;
       user.email = req.body.email || user.email;
       user.avatar = req.file ? req.file.filename : user.avatar;
+      user.role = req.body.role || user.role; // Update the role if provided in the request
 
       if (req.body.password) {
         user.password = req.body.password;
