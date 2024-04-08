@@ -70,45 +70,52 @@ const signupUser = async (req, res) => {
 };
 
 const updateUserProfile = async (req, res) => {
-  const userId = req.params.id; // Get the user ID from the request parameters
-  const user = await User.findById(userId);
+  const userId = req.params.id;
 
-  if (user) {
-    user.firstName = req.body.firstName || user.firstName;
-    user.lastName = req.body.lastName || user.lastName;
-    user.email = req.body.email || user.email;
-    user.avatar = req.file ? req.file.filename : user.avatar;
+  try {
+    const user = await User.findById(userId);
 
-    if (req.file) {
-      // File was uploaded successfully
-      user.avatar = req.file.filename;
-    }
+    if (user) {
+      // Allow Learner to update their own profile
+      if (req.user.role === "Learner" && req.user._id.toString() !== userId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
 
-    if (req.body.password) {
-      user.password = req.body.password;
-    }
-    if (req.body.progress) {
-      user.progress = req.body.progress;
-    }
-    if (req.body.achievement) {
-      user.achievement = req.body.achievement;
-    }
-    const updateUser = await user.save();
+      // Update the user's information
+      user.firstName = req.body.firstName || user.firstName;
+      user.lastName = req.body.lastName || user.lastName;
+      user.email = req.body.email || user.email;
+      user.avatar = req.file ? req.file.filename : user.avatar;
 
-    res.json({
-     _id: updateUser._id,
-      firstName: updateUser.firstName,
-      lastName: updateUser.lastName,
-      email: updateUser.email,
-      avatar: updateUser.avatar,
-      role: updateUser.role,
-      progress: updateUser.progress,
-      achievement: updateUser.achievement,
-      token: createToken(updateUser._id),
-    });
-  } else {
-    res.status(404);
-    throw new Error("User not found");
+      if (req.body.password) {
+        user.password = req.body.password;
+      }
+      if (req.body.progress) {
+        user.progress = req.body.progress;
+      }
+      if (req.body.achievement) {
+        user.achievement = req.body.achievement;
+      }
+
+      const updatedUser = await user.save();
+
+      res.json({
+        _id: updatedUser._id,
+        firstName: updatedUser.firstName,
+        lastName: updatedUser.lastName,
+        email: updatedUser.email,
+        avatar: updatedUser.avatar,
+        role: updatedUser.role,
+        progress: updatedUser.progress,
+        achievement: updatedUser.achievement,
+        token: createToken(updatedUser._id),
+      });
+    } else {
+      res.status(404);
+      throw new Error("User not found");
+    }
+  } catch (error) {
+    res.status(400).json({ error: error.message });
   }
 };
 

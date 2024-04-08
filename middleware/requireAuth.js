@@ -2,9 +2,7 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 
 const requireAuth = async (req, res, next) => {
-  //verify user is authenticated
   const { authorization } = req.headers;
-  console.log("Authorization:", authorization);
   if (!authorization) {
     return res.status(401).json({ error: "Authorization token required" });
   }
@@ -14,20 +12,29 @@ const requireAuth = async (req, res, next) => {
   try {
     const { _id } = jwt.verify(token, process.env.SECRET);
     const user = await User.findOne({ _id }).select("_id role");
-    console.log("User from token:", user);
+
     if (!user) {
       return res.status(401).json({ error: "Authorization token is invalid" });
     }
 
-    // Check if the user is an admin
+    // Set the user object in the request
+    req.user = user;
+
+    // Allow access based on the user's role
     if (user.role === "Admin") {
-      req.user = user;
+      // Admin has full access
       next();
+    } else if (user.role === "Learner") {
+      // Learner can only access their own profile
+      if (req.params.id === user._id.toString()) {
+        next();
+      } else {
+        return res.status(403).json({ error: "Forbidden" });
+      }
     } else {
       return res.status(403).json({ error: "Forbidden" });
     }
   } catch (error) {
-    console.log(error);
     res.status(401).json({ error: "Request is not authorized" });
   }
 };
