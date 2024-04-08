@@ -26,8 +26,11 @@ const requireAuth = async (req, res, next) => {
       next();
     } else if (user.role === "Learner") {
       // Learner can only access their own profile
-      req.params.id = user._id;
-      next();
+      if (req.params.id === user._id.toString()) {
+        next();
+      } else {
+        return res.status(403).json({ error: "Forbidden" });
+      }
     } else {
       return res.status(403).json({ error: "Forbidden" });
     }
