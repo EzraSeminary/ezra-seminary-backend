@@ -10,6 +10,7 @@ const allowedOrigins = [
   "https://ezraseminary.netlify.app",
   "https://ezraseminary.netlify.app/",
   "http://ezraseminary.org",
+  "https://ezraseminary.org",
 ];
 
 // const allowedOrigins = "*";
