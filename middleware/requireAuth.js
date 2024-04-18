@@ -29,10 +29,10 @@ const requireAuth = async (req, res, next) => {
       if (req.params.id === user._id.toString()) {
         next();
       } else {
-        return res.status(403).json({ error: "Forbidden" });
+        return res.status(403).json({ error: "Forbiyeee" });
       }
     } else {
-      return res.status(403).json({ error: "Forbidden" });
+      return res.status(403).json({ error: "Fanoooo" });
     }
   } catch (error) {
     res.status(401).json({ error: "Request is not authorized" });
