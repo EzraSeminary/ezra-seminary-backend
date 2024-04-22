@@ -10,6 +10,7 @@ const {
   getUsers,
   deleteUser, // Add this line
 } = require("../controllers/usersController");
+const contactController = require("../controllers/contactsController");
 const requireAuth = require("../middleware/requireAuth");
 const upload = require("../middleware/upload");
 
@@ -25,5 +26,7 @@ router.put("/progress", requireAuth, updateUserProgress);
 router.get("/current", requireAuth, getCurrentUser);
 router.get("/", getUsers); // Add this line
 router.delete("/:id", deleteUser);
+
+router.post("/contact", contactController.sendContactMessage);
 
 module.exports = router;
