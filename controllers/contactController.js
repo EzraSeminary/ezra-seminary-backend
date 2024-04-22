@@ -29,3 +29,5 @@ const sendContactMessage = async (req, res) => {
     res.status(500).json({ error: "Error saving contact message." });
   }
 };
+
+module.exports = { sendContactMessage };
