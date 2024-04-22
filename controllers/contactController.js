@@ -1,5 +1,3 @@
-const nodemailer = require("nodemailer");
-
 const Contact = require("../models/Contact");
 
 const sendContactMessage = async (req, res) => {
@@ -30,14 +28,4 @@ const sendContactMessage = async (req, res) => {
     console.error("Error saving contact message:", error);
     res.status(500).json({ error: "Error saving contact message." });
   }
-};
-const isValidEmail = (email) => {
-  // Add your email validation logic here
-  // For example, you can use a regular expression to validate the email format
-  const emailRegex = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/;
-  return emailRegex.test(email);
-};
-
-module.exports = {
-  sendContactMessage,
 };
