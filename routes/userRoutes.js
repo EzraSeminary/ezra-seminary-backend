@@ -8,7 +8,7 @@ const {
   updateUserProgress,
   getCurrentUser,
   getUsers,
-  deleteUser, // Add this line
+  deleteUser,
 } = require("../controllers/usersController");
 const contactController = require("../controllers/contactController");
 const requireAuth = require("../middleware/requireAuth");
