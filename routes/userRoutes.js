@@ -10,7 +10,7 @@ const {
   getUsers,
   deleteUser, // Add this line
 } = require("../controllers/usersController");
-const contactController = require("../controllers/contactsController");
+const contactController = require("../controllers/contactController");
 const requireAuth = require("../middleware/requireAuth");
 const upload = require("../middleware/upload");
 
