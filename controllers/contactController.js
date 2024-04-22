@@ -1,4 +1,5 @@
 const Contact = require("../models/Contact");
+const nodemailer = require("nodemailer");
 
 const isValidEmail = (email) => {
   const emailRegex =
@@ -29,10 +30,38 @@ const sendContactMessage = async (req, res) => {
 
     await newContact.save();
 
-    res.status(200).json({ message: "Contact message saved successfully." });
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER, // Replace with your Gmail email address
+        pass: process.env.EMAIL_PASS, // Replace with your Gmail password or app-specific password
+      },
+    });
+
+    // Configure the email options
+    const mailOptions = {
+      from: process.env.EMAIL_USER, // Replace with your Gmail email address
+      to: "seminaryezra@gmail.com",
+      subject: "New Contact Message",
+      text: `
+        First Name: ${firstName}
+        Last Name: ${lastName}
+        Email: ${email}
+        Message: ${message}
+      `,
+    };
+
+    // Send the email
+    await transporter.sendMail(mailOptions);
+
+    res
+      .status(200)
+      .json({ message: "Contact message saved and email sent successfully." });
   } catch (error) {
-    console.error("Error saving contact message:", error);
-    res.status(500).json({ error: "Error saving contact message." });
+    console.error("Error saving contact message and sending email:", error);
+    res
+      .status(500)
+      .json({ error: "Error saving contact message and sending email." });
   }
 };
 
