@@ -1,7 +1,6 @@
 // controllers/analyticsController.js
-
 const User = require("../models/User");
-const Course = require("../models/Course"); // Assuming you have a Course model
+const Course = require("../models/Course");
 
 const getAnalytics = async (req, res) => {
   try {
