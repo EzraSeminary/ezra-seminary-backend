@@ -1,6 +1,6 @@
-// controllers/analyticsController.js
 const User = require("../models/User");
 const Course = require("../models/Course");
+
 const getAnalytics = async (req, res) => {
   try {
     const newUsers = await User.countDocuments({
@@ -12,7 +12,7 @@ const getAnalytics = async (req, res) => {
     });
     const totalCourses = await Course.countDocuments();
     const accountsReached = await User.countDocuments({
-      lastLogin: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+      lastLogin: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }, // Count users who logged in within the last 30 days
     });
     const usersLeft = await User.countDocuments({
       lastLogin: { $lt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000) }, // Count users who haven't logged in for the last 2 months
