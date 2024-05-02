@@ -3,29 +3,38 @@ const Course = require("../models/Course");
 
 const getAnalytics = async (req, res) => {
   try {
-    const newUsers = await User.countDocuments({
-      createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }, // Count users created in the last 30 days
+    // Get the current analytics data
+    let analyticsData = await Analytics.findOne();
+
+    if (!analyticsData) {
+      // If no analytics data exists, create a new one
+      analyticsData = new Analytics({
+        newUsers: 0,
+        totalUsers: 0,
+        newCourses: 0,
+        totalCourses: 0,
+        accountsReached: 0,
+        usersLeft: 0,
+      });
+    }
+
+    // Update the analytics data
+    analyticsData.newUsers += await User.countDocuments({
+      createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
     });
-    const totalUsers = await User.countDocuments();
-    const newCourses = await Course.countDocuments({
-      createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }, // Count courses created in the last 30 days
+    analyticsData.totalUsers = await User.countDocuments();
+    analyticsData.newCourses += await Course.countDocuments({
+      createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
     });
-    const totalCourses = await Course.countDocuments();
-    const accountsReached = await User.countDocuments({
-      lastLogin: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }, // Count users who logged in within the last 30 days
+    analyticsData.totalCourses = await Course.countDocuments();
+    analyticsData.accountsReached = await User.countDocuments({
+      lastLogin: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
     });
-    const usersLeft = await User.countDocuments({
-      lastLogin: { $lt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000) }, // Count users who haven't logged in for the last 2 months
+    analyticsData.usersLeft = await User.countDocuments({
+      lastLogin: { $lt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000) },
     });
 
-    const analyticsData = {
-      newUsers,
-      totalUsers,
-      newCourses,
-      totalCourses,
-      accountsReached,
-      usersLeft,
-    };
+    await analyticsData.save();
 
     res.json(analyticsData);
   } catch (error) {
