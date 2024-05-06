@@ -1,5 +1,6 @@
 const User = require("../models/User");
 const Course = require("../models/Course");
+const Analytics = require("../models/Analytics");
 
 const getAnalytics = async (req, res) => {
   try {
