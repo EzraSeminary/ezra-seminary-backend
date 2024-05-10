@@ -1,6 +1,5 @@
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
-const upload = require("../middleware/upload");
 const { getAnalytics } = require("../controllers/analyticsController");
 
 // Create JWT
