@@ -25,6 +25,7 @@ const userSchema = new Schema({
   achievement: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now },
   deletedAt: { type: Date, default: null },
+  lastLogin: { type: Date, default: Date.now },
 });
 
 userSchema.index({ email: 1 }, { unique: true }); // Create index for email field with unique set
