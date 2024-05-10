@@ -1,6 +1,6 @@
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
-const upload = require("../middleware/upload");
+const { getAnalytics } = require("../controllers/analyticsController");
 
 // Create JWT
 const createToken = (_id) => {
@@ -13,6 +13,10 @@ const loginUser = async (req, res) => {
 
   try {
     const user = await User.login(email, password);
+
+    // Update the lastLogin field~
+    user.lastLogin = new Date();
+    await user.save();
 
     // create token
     const token = createToken(user._id);
@@ -112,9 +116,11 @@ const updateUserProfile = async (req, res) => {
         achievement: updatedUser.achievement,
         token: createToken(updatedUser._id),
       });
+
+      // Update the analytics data
+      await getAnalytics();
     } else {
-      res.status(404);
-      throw new Error("User not found");
+      res.status(404).json({ error: "User not found" });
     }
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -174,6 +180,9 @@ const updateUserProgress = async (req, res) => {
       achievement: updatedUser.achievement,
       token: createToken(updatedUser._id),
     });
+
+    // Update the analytics data
+    await getAnalytics();
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -220,8 +229,9 @@ const deleteUser = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    await user.deleteOne();
-    res.json({ message: "User deleted successfully" });
+    user.deletedAt = new Date();
+    await user.save();
+    res.json({ message: "User marked as deleted successfully" });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }

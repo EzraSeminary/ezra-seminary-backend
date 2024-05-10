@@ -12,6 +12,7 @@ const userRoutes = require("./routes/userRoutes");
 const path = require("path");
 const courseController = require("./controllers/courseController");
 const quizController = require("./controllers/quizController");
+const analyticsRoutes = require("./routes/analyticsRoutes");
 const requireAuth = require("./middleware/requireAuth");
 
 app.use(express.json({ limit: "50mb" }));
@@ -45,6 +46,7 @@ app.use("/users", userRoutes);
 app.use("/devotion", devotionRoutes);
 app.use("/course", courseController);
 app.use("/quiz", quizController);
+app.use("/analytics", analyticsRoutes);
 
 // app.use("/images", express.static("public/images"));
 app.all("*", (req, res) => {
