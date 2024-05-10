@@ -21,6 +21,7 @@ const getAnalytics = async (req, res) => {
 
     const newUsersCount = await User.countDocuments({
       createdAt: { $gt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+      deletedAt: null,
     });
 
     // Update the analytics data
