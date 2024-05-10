@@ -227,8 +227,9 @@ const deleteUser = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    await user.deleteOne();
-    res.json({ message: "User deleted successfully" });
+    user.deletedAt = new Date();
+    await user.save();
+    res.json({ message: "User marked as deleted successfully" });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
