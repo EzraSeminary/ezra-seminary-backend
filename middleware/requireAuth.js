@@ -29,10 +29,12 @@ const requireAuth = async (req, res, next) => {
       if (req.params.id === user._id.toString()) {
         next();
       } else {
-        return res.status(403).json({ error: "Forbiyeee" });
+        // Throw an error instead of sending a response
+        throw new Error("Forbidden");
       }
     } else {
-      return res.status(403).json({ error: "Fanoooo" });
+      // Throw an error instead of sending a response
+      throw new Error("Invalid role");
     }
   } catch (error) {
     res.status(401).json({ error: "Request is not authorized" });

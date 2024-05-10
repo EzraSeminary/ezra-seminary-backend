@@ -120,8 +120,7 @@ const updateUserProfile = async (req, res) => {
         token: createToken(updatedUser._id),
       });
     } else {
-      res.status(404);
-      throw new Error("User not found");
+      res.status(404).json({ error: "User not found" });
     }
   } catch (error) {
     res.status(400).json({ error: error.message });
