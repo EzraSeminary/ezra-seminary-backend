@@ -15,6 +15,10 @@ const loginUser = async (req, res) => {
   try {
     const user = await User.login(email, password);
 
+    // Update the lastLogin field~
+    user.lastLogin = new Date();
+    await user.save();
+
     // create token
     const token = createToken(user._id);
 
