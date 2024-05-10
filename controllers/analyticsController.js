@@ -34,7 +34,10 @@ const getAnalytics = async (req, res) => {
       lastLogin: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
     });
     analyticsData.usersLeft = await User.countDocuments({
-      lastLogin: { $lt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000) },
+      $or: [
+        { lastLogin: { $lt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000) } },
+        { deletedAt: { $ne: null } },
+      ],
     });
 
     await analyticsData.save();
