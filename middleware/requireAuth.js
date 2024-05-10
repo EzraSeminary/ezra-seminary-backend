@@ -25,17 +25,19 @@ const requireAuth = async (req, res, next) => {
       // Admin has full access
       next();
     } else if (user.role === "Learner") {
-      // Learner can only access their own profile
-      if (req.params.id === user._id.toString()) {
-        next();
+      // Learner can access their own profile or any other route
+      if (req.params.id && req.params.id !== user._id.toString()) {
+        // Learner is trying to update another Learner's profile
+        return res.status(403).json({ error: "Forbidden" });
       } else {
-        return res.status(403).json({ error: "Forbiyeee" });
+        // Learner is updating their own profile or accessing any other route
+        next();
       }
     } else {
-      return res.status(403).json({ error: "Fanoooo" });
+      return res.status(403).json({ error: "Invalid role" });
     }
   } catch (error) {
-    res.status(401).json({ error: "Request is not authorized" });
+    return res.status(401).json({ error: "Request is not authorized" });
   }
 };
 
