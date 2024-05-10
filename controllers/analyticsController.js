@@ -2,7 +2,7 @@ const User = require("../models/User");
 const Course = require("../models/Course");
 const Analytics = require("../models/Analytics");
 
-const getAnalytics = async (req, res) => {
+const getAnalytics = async () => {
   try {
     // Get the current analytics data
     let analyticsData = await Analytics.findOne();
@@ -43,10 +43,10 @@ const getAnalytics = async (req, res) => {
 
     await analyticsData.save();
 
-    res.json(analyticsData);
+    return analyticsData;
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    throw new Error("Internal server error");
   }
 };
 

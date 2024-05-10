@@ -118,7 +118,7 @@ const updateUserProfile = async (req, res) => {
       });
 
       // Update the analytics data
-      await getAnalytics(req, res);
+      await getAnalytics();
     } else {
       res.status(404).json({ error: "User not found" });
     }
@@ -169,9 +169,6 @@ const updateUserProgress = async (req, res) => {
 
     const updatedUser = await user.save();
 
-    // Update the analytics data
-    await getAnalytics(req, res);
-
     res.json({
       _id: updatedUser._id,
       firstName: updatedUser.firstName,
@@ -183,6 +180,9 @@ const updateUserProgress = async (req, res) => {
       achievement: updatedUser.achievement,
       token: createToken(updatedUser._id),
     });
+
+    // Update the analytics data
+    await getAnalytics();
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
