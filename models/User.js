@@ -23,6 +23,7 @@ const userSchema = new Schema({
     },
   ],
   achievement: { type: Number, default: 0 },
+  createdAt: { type: Date, default: Date.now },
   deletedAt: { type: Date, default: null },
 });
 
