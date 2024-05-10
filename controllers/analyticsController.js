@@ -24,9 +24,7 @@ const getAnalytics = async (req, res) => {
     });
 
     // Update the analytics data
-    analyticsData.newUsers = await User.countDocuments({
-      createdAt: { $gt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
-    });
+    analyticsData.newUsers = newUsersCount;
     analyticsData.newCourses = await Course.countDocuments({
       createdAt: { $gt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
     });
