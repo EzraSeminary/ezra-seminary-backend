@@ -20,13 +20,13 @@ const getAnalytics = async (req, res) => {
     }
 
     // Update the analytics data
-    analyticsData.newUsers += await User.countDocuments({
-      createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+    analyticsData.newUsers = await User.countDocuments({
+      createdAt: { $gt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+    });
+    analyticsData.newCourses = await Course.countDocuments({
+      createdAt: { $gt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
     });
     analyticsData.totalUsers = await User.countDocuments();
-    analyticsData.newCourses += await Course.countDocuments({
-      createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
-    });
     analyticsData.totalCourses = await Course.countDocuments();
     analyticsData.accountsReached = await User.countDocuments({
       lastLogin: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },

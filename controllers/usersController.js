@@ -1,6 +1,7 @@
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
 const upload = require("../middleware/upload");
+const { getAnalytics } = require("../controllers/analyticsController");
 
 // Create JWT
 const createToken = (_id) => {
@@ -101,6 +102,9 @@ const updateUserProfile = async (req, res) => {
 
       const updatedUser = await user.save();
 
+      // Update the analytics data
+      await getAnalytics(req, res);
+
       res.json({
         _id: updatedUser._id,
         firstName: updatedUser.firstName,
@@ -162,6 +166,9 @@ const updateUserProgress = async (req, res) => {
     user.progress = progress;
 
     const updatedUser = await user.save();
+
+    // Update the analytics data
+    await getAnalytics(req, res);
 
     res.json({
       _id: updatedUser._id,
