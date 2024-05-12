@@ -182,7 +182,7 @@ const updateUserProgress = async (req, res) => {
     });
 
     // Update the analytics data
-    await getAnalytics();
+    await getAnalytics(req);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
