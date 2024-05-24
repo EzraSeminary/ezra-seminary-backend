@@ -260,13 +260,13 @@ const forgotPassword = async (req, res) => {
     const transporter = nodemailer.createTransport({
       service: "Gmail",
       auth: {
-        user: process.env.EMAIL,
-        pass: process.env.EMAIL_PASSWORD,
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
       },
     });
 
     const mailOptions = {
-      from: process.env.EMAIL,
+      from: process.env.EMAIL_USER,
       to: user.email,
       subject: "Password Reset Request",
       text: `You are receiving this because you (or someone else) have requested the reset of the password for your account.\n\n
@@ -296,7 +296,7 @@ const resetPassword = async (req, res) => {
         .json({ error: "Password reset token is invalid or has expired" });
     }
 
-    user.password = req.body.password;
+    user.password = req.body.password; // Assuming the new password is in the request body
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
 
