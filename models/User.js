@@ -26,6 +26,8 @@ const userSchema = new Schema({
   createdAt: { type: Date, default: Date.now },
   deletedAt: { type: Date, default: null },
   lastLogin: { type: Date, default: Date.now },
+  resetPasswordToken: { type: String },
+  resetPasswordExpires: { type: Date },
 });
 
 userSchema.index({ email: 1 }, { unique: true }); // Create index for email field with unique set
