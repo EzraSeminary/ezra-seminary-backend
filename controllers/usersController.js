@@ -265,8 +265,7 @@ const forgotPassword = async (req, res) => {
       },
     });
 
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173"; // Replace 3000 with your frontend port if different
-
+    const frontendUrl = process.env.FRONTEND_URL;
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: user.email,
