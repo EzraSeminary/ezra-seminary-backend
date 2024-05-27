@@ -12,10 +12,19 @@ const userRoutes = require("./routes/userRoutes");
 const path = require("path");
 const courseController = require("./controllers/courseController");
 const quizController = require("./controllers/quizController");
-const userController = require("./controllers/userController");
+const userController = require("./controllers/usersController");
 const analyticsRoutes = require("./routes/analyticsRoutes");
 const requireAuth = require("./middleware/requireAuth");
 const passport = require("./config/passport");
+const session = require("express-session");
+
+app.use(
+  session({
+    secret: process.env.SECRET,
+    resave: false,
+    saveUninitialized: true,
+  })
+);
 
 // Initialize passport
 app.use(passport.initialize());
@@ -64,6 +73,8 @@ app.get(
   }),
   userController.googleLogin
 );
+
+app.post("/auth/google/verify", userController.verifyGoogleToken);
 
 // app.use("/images", express.static("public/images"));
 app.all("*", (req, res) => {

@@ -9,6 +9,57 @@ const createToken = (_id) => {
   return jwt.sign({ _id }, process.env.SECRET, { expiresIn: "3d" });
 };
 
+const { OAuth2Client } = require("google-auth-library");
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+// Verify Google Token Controller
+const verifyGoogleToken = async (req, res) => {
+  try {
+    const { token: reqToken } = req.body;
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+    const userid = payload["sub"];
+
+    // You can now use `userid` to find or create the user in your database
+    let user = await User.findOne({ googleId: userid });
+
+    if (!user) {
+      // If the user does not exist, create a new user
+      user = new User({
+        googleId: userid,
+        firstName: payload["given_name"],
+        lastName: payload["family_name"],
+        email: payload["email"],
+        avatar: payload["picture"],
+        createdAt: Date.now(),
+      });
+      await user.save();
+    } else {
+      // If the user exists, update the last login
+      user.lastLogin = Date.now();
+      await user.save();
+    }
+
+    // Create a JWT token
+    const token = createToken(user._id);
+
+    res.status(200).json({
+      _id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      token,
+      role: user.role,
+      avatar: user.avatar,
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
 // Google OAuth Login Controller
 const googleLogin = async (req, res) => {
   try {
@@ -340,6 +391,7 @@ module.exports = {
   googleLogin,
   loginUser,
   signupUser,
+  verifyGoogleToken,
   updateUserProfile,
   getUserById,
   updateUserProgress,
