@@ -14,7 +14,7 @@ const courseController = require("./controllers/courseController");
 const quizController = require("./controllers/quizController");
 const analyticsRoutes = require("./routes/analyticsRoutes");
 const requireAuth = require("./middleware/requireAuth");
-const passport = require("./config/passport"); // Ensure this path is correct
+const passport = require("./config/passport");
 
 // Initialize passport
 app.use(passport.initialize());
