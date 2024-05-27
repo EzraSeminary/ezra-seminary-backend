@@ -1,6 +1,6 @@
 const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
-const User = require("../models/User"); // Ensure this path is correct
+const User = require("../models/User"); // Correct path to your User model
 const dotenv = require("dotenv");
 
 dotenv.config();
@@ -15,7 +15,6 @@ passport.use(
     },
     async (req, accessToken, refreshToken, profile, done) => {
       try {
-        // Find or create the user
         let user = await User.findOne({ googleId: profile.id });
 
         if (!user) {
@@ -27,8 +26,12 @@ passport.use(
             avatar: profile.photos[[1]].value,
             createdAt: Date.now(),
           });
-          await user.save();
+        } else {
+          // Update the last login
+          user.lastLogin = Date.now();
         }
+
+        await user.save();
         return done(null, user);
       } catch (error) {
         return done(error, false);

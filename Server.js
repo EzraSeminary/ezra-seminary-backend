@@ -52,19 +52,14 @@ app.use("/analytics", analyticsRoutes);
 // Integrate routes for authentication
 app.get(
   "/auth/google",
-  passport.authenticate("google", {
-    scope: ["profile", "email"],
-  })
+  passport.authenticate("google", { scope: ["profile", "email"] })
 );
 
 app.get(
   "/auth/google/callback",
-  passport.authenticate("google", {
-    failureRedirect: "/login-failed",
-  }),
+  passport.authenticate("google", { failureRedirect: "/login-failed" }),
   (req, res) => {
-    // Successful authentication, redirect to your preferred path in the application
-    res.redirect("/dashboard");
+    res.redirect("/dashboard"); // Successful authentication, redirect to your preferred path in the application
   }
 );
 

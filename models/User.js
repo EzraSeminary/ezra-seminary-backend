@@ -7,14 +7,14 @@ const Schema = mongoose.Schema;
 const userSchema = new Schema({
   firstName: { type: String, required: true },
   lastName: { type: String, required: true },
-  email: { type: String, required: true, unique: true }, // email must be unique
-  password: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: false },
   role: {
     type: String,
-    enum: ["Learner", "Admin"], // Enum to restrict the value to 'user' or 'admin'
-    default: "Learner", // Default role assigned if none is specified
+    enum: ["Learner", "Admin"], // Ensure the role is either 'Learner' or 'Admin'
+    default: "Learner", // Default role is 'Learner'
   },
-  avatar: { type: String, default: "default-avatar.jpg" }, // Add this line
+  avatar: { type: String, default: "default-avatar.jpg" },
   progress: [
     {
       courseId: { type: String, required: true },
@@ -29,12 +29,10 @@ const userSchema = new Schema({
   resetPasswordToken: { type: String },
   resetPasswordExpires: { type: Date },
   googleId: { type: String, unique: true, sparse: true },
-  password: { type: String, required: false },
 });
 
 userSchema.index({ email: 1 }, { unique: true }); // Create index for email field with unique set
 
-//static signup method
 userSchema.statics.signup = async function (
   firstName,
   lastName,
@@ -43,15 +41,17 @@ userSchema.statics.signup = async function (
   role = "Learner",
   avatar = "default-avatar.jpg"
 ) {
-  // validation
-  if (!firstName || !lastName || !email || !password) {
-    throw Error("All fields must be filled");
+  if (
+    !firstName ||
+    !lastName ||
+    !email ||
+    (password && !validator.isStrongPassword(password))
+  ) {
+    throw Error("Invalid input");
   }
+
   if (!validator.isEmail(email)) {
     throw Error("Email is not valid");
-  }
-  if (!validator.isStrongPassword(password)) {
-    throw Error("Password is not strong enough");
   }
 
   const exists = await this.findOne({ email });
@@ -59,48 +59,40 @@ userSchema.statics.signup = async function (
   if (exists) {
     throw Error("Email already in use");
   }
-  // use bcrypt to hash the password
-  // const salt = await bcrypt.genSalt(10);
-  // const hash = await bcrypt.hash(password, salt);
-  // console.log(password);
 
-  // Ensure the role is either 'user' or 'admin'
-  if (!["Learner", "Admin"].includes(role)) {
-    throw Error("Role is not valid");
-  }
-
-  const user = await this.create({
+  const user = new this({
     firstName,
     lastName,
     email,
-    // password: hash,
     password,
-    role: role || "Learner",
+    role,
     avatar,
   });
 
+  if (password) {
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(password, salt);
+  }
+
+  await user.save();
   return user;
 };
 
 userSchema.pre("save", async function (next) {
-  // Only hash the password if it has been modified (or is new)
   if (!this.isModified("password")) return next();
-
-  // Hash the password
-  const salt = await bcrypt.genSalt(10);
-  const hash = await bcrypt.hash(this.password, salt);
-
-  // Override the plaintext password with the hashed one
-  this.password = hash;
+  if (this.password) {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+  }
   next();
 });
 
 // static login method
 userSchema.statics.login = async function (email, password) {
-  // validation
   if (!email || !password) {
     throw Error("All fields must be filled");
   }
+
   if (!validator.isEmail(email)) {
     throw Error("Email is not valid");
   }
@@ -111,7 +103,10 @@ userSchema.statics.login = async function (email, password) {
     throw Error("Email not found");
   }
 
-  // compare password
+  if (!user.password) {
+    throw Error("Password not set");
+  }
+
   const isMatch = await bcrypt.compare(password, user.password);
 
   if (!isMatch) {
