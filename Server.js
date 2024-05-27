@@ -14,6 +14,11 @@ const courseController = require("./controllers/courseController");
 const quizController = require("./controllers/quizController");
 const analyticsRoutes = require("./routes/analyticsRoutes");
 const requireAuth = require("./middleware/requireAuth");
+const passport = require("./config/passport"); // Ensure this path is correct
+
+// Initialize passport
+app.use(passport.initialize());
+app.use(passport.session());
 
 app.use(express.json({ limit: "50mb" }));
 
@@ -37,16 +42,31 @@ app.get("/download/:imageName", (req, res) => {
 });
 
 app.use("/", require("./routes/root"));
-// app.use((req, res, next) => {
-//   console.log(req.path, req.method);
-//   next();
-// });
 // All routes are authenticated by default
 app.use("/users", userRoutes);
 app.use("/devotion", devotionRoutes);
 app.use("/course", courseController);
 app.use("/quiz", quizController);
 app.use("/analytics", analyticsRoutes);
+
+// Integrate routes for authentication
+app.get(
+  "/auth/google",
+  passport.authenticate("google", {
+    scope: ["profile", "email"],
+  })
+);
+
+app.get(
+  "/auth/google/callback",
+  passport.authenticate("google", {
+    failureRedirect: "/login-failed",
+  }),
+  (req, res) => {
+    // Successful authentication, redirect to your preferred path in the application
+    res.redirect("/dashboard");
+  }
+);
 
 // app.use("/images", express.static("public/images"));
 app.all("*", (req, res) => {
