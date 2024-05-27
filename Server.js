@@ -12,6 +12,7 @@ const userRoutes = require("./routes/userRoutes");
 const path = require("path");
 const courseController = require("./controllers/courseController");
 const quizController = require("./controllers/quizController");
+const userController = require("./controllers/userController");
 const analyticsRoutes = require("./routes/analyticsRoutes");
 const requireAuth = require("./middleware/requireAuth");
 const passport = require("./config/passport");
@@ -57,10 +58,11 @@ app.get(
 
 app.get(
   "/auth/google/callback",
-  passport.authenticate("google", { failureRedirect: "/login-failed" }),
-  (req, res) => {
-    res.redirect("/dashboard"); // Successful authentication, redirect to your preferred path in the application
-  }
+  passport.authenticate("google", {
+    failureRedirect: "/login",
+    successRedirect: "/dashboard", // Redirect to your dashboard or preferred path
+  }),
+  userController.googleLogin
 );
 
 // app.use("/images", express.static("public/images"));

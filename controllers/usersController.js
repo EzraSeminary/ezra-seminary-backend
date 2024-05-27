@@ -9,6 +9,33 @@ const createToken = (_id) => {
   return jwt.sign({ _id }, process.env.SECRET, { expiresIn: "3d" });
 };
 
+// Google OAuth Login Controller
+const googleLogin = async (req, res) => {
+  try {
+    // The user object is already available in req.user from the passport.js configuration
+    const { _id, firstName, lastName, email, avatar, role } = req.user;
+
+    // Update the lastLogin field
+    req.user.lastLogin = new Date();
+    await req.user.save();
+
+    // Create a JWT token
+    const token = createToken(_id);
+
+    res.status(200).json({
+      _id,
+      firstName,
+      lastName,
+      email,
+      token,
+      role,
+      avatar,
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
 // Login Controller
 const loginUser = async (req, res) => {
   const { email, password } = req.body;
@@ -310,6 +337,7 @@ const resetPassword = async (req, res) => {
 };
 
 module.exports = {
+  googleLogin,
   loginUser,
   signupUser,
   updateUserProfile,

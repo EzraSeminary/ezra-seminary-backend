@@ -1,6 +1,7 @@
+// passport.config.js
 const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
-const User = require("../models/User"); // Correct path to your User model
+const User = require("../models/User");
 const dotenv = require("dotenv");
 
 dotenv.config();
@@ -11,9 +12,8 @@ passport.use(
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       callbackURL: "/auth/google/callback",
-      passReqToCallback: true, // Pass the entire request object to the callback
     },
-    async (req, accessToken, refreshToken, profile, done) => {
+    async (accessToken, refreshToken, profile, done) => {
       try {
         let user = await User.findOne({ googleId: profile.id });
 
@@ -22,16 +22,17 @@ passport.use(
             googleId: profile.id,
             firstName: profile.name.givenName,
             lastName: profile.name.familyName,
-            email: profile.emails[[1]].value,
-            avatar: profile.photos[[1]].value,
+            email: profile.emails[0].value,
+            avatar: profile.photos[0].value,
             createdAt: Date.now(),
           });
+          await user.save();
         } else {
           // Update the last login
           user.lastLogin = Date.now();
+          await user.save();
         }
 
-        await user.save();
         return done(null, user);
       } catch (error) {
         return done(error, false);
