@@ -28,6 +28,8 @@ const userSchema = new Schema({
   lastLogin: { type: Date, default: Date.now },
   resetPasswordToken: { type: String },
   resetPasswordExpires: { type: Date },
+  googleId: { type: String, unique: true, sparse: true },
+  password: { type: String, required: false },
 });
 
 userSchema.index({ email: 1 }, { unique: true }); // Create index for email field with unique set
