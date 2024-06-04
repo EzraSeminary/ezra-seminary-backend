@@ -22,8 +22,8 @@ passport.use(
             googleId: profile.id,
             firstName: profile.name.givenName,
             lastName: profile.name.familyName,
-            email: profile.emails[0].value,
-            avatar: profile.photos[0].value,
+            email: profile.emails[[1]].value,
+            avatar: profile.photos[[1]].value,
             createdAt: Date.now(),
           });
           await user.save();

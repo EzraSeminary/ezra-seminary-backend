@@ -3,31 +3,29 @@ const jwt = require("jsonwebtoken");
 const { getAnalytics } = require("../controllers/analyticsController");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
+const { OAuth2Client } = require("google-auth-library");
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Create JWT
 const createToken = (_id) => {
   return jwt.sign({ _id }, process.env.SECRET, { expiresIn: "3d" });
 };
 
-const { OAuth2Client } = require("google-auth-library");
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-
-// Verify Google Token Controller
+// Verify Google Token
 const verifyGoogleToken = async (req, res) => {
   try {
     const { token: reqToken } = req.body;
     const ticket = await client.verifyIdToken({
-      idToken: token,
+      idToken: reqToken,
       audience: process.env.GOOGLE_CLIENT_ID,
     });
     const payload = ticket.getPayload();
     const userid = payload["sub"];
 
-    // You can now use `userid` to find or create the user in your database
+    // Find or create the user in the database
     let user = await User.findOne({ googleId: userid });
 
     if (!user) {
-      // If the user does not exist, create a new user
       user = new User({
         googleId: userid,
         firstName: payload["given_name"],
@@ -43,7 +41,7 @@ const verifyGoogleToken = async (req, res) => {
       await user.save();
     }
 
-    // Create a JWT token
+    // Create JWT token
     const token = createToken(user._id);
 
     res.status(200).json({
@@ -54,6 +52,8 @@ const verifyGoogleToken = async (req, res) => {
       token,
       role: user.role,
       avatar: user.avatar,
+      progress: user.progress,
+      achievement: user.achievement,
     });
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -81,6 +81,8 @@ const googleLogin = async (req, res) => {
       token,
       role,
       avatar,
+      progress: req.user.progress,
+      achievement: req.user.achievement,
     });
   } catch (error) {
     res.status(400).json({ error: error.message });
