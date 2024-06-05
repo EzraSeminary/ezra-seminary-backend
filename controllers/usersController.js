@@ -11,7 +11,32 @@ const createToken = (_id) => {
   return jwt.sign({ _id }, process.env.SECRET, { expiresIn: "3d" });
 };
 
-// Verify Google Token
+// Google Login Controller
+const googleLogin = async (req, res) => {
+  try {
+    // The user object is already available in req.user from the passport.js configuration
+    const { _id, firstName, lastName, email, avatar, role } = req.user;
+
+    // Create JWT token
+    const token = createToken(_id);
+
+    res.status(200).json({
+      _id,
+      firstName,
+      lastName,
+      email,
+      token,
+      role,
+      avatar,
+      progress: req.user.progress,
+      achievement: req.user.achievement,
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+// Verify Google Token Controller
 const verifyGoogleToken = async (req, res) => {
   try {
     const { token: reqToken } = req.body;
@@ -22,8 +47,10 @@ const verifyGoogleToken = async (req, res) => {
     const payload = ticket.getPayload();
     const userid = payload["sub"];
 
-    // Find or create the user in the database
-    let user = await User.findOne({ googleId: userid });
+    // Find user by googleId or email
+    let user = await User.findOne({
+      $or: [{ googleId: userid }, { email: payload.email }],
+    });
 
     if (!user) {
       user = new User({
@@ -34,12 +61,14 @@ const verifyGoogleToken = async (req, res) => {
         avatar: payload["picture"],
         createdAt: Date.now(),
       });
-      await user.save();
-    } else {
-      // If the user exists, update the last login
-      user.lastLogin = Date.now();
-      await user.save();
+    } else if (!user.googleId) {
+      // If user exists without googleId (legacy account), update it
+      user.googleId = userid;
     }
+
+    // Update last login time
+    user.lastLogin = Date.now();
+    await user.save();
 
     // Create JWT token
     const token = createToken(user._id);
@@ -54,35 +83,6 @@ const verifyGoogleToken = async (req, res) => {
       avatar: user.avatar,
       progress: user.progress,
       achievement: user.achievement,
-    });
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-};
-
-// Google OAuth Login Controller
-const googleLogin = async (req, res) => {
-  try {
-    // The user object is already available in req.user from the passport.js configuration
-    const { _id, firstName, lastName, email, avatar, role } = req.user;
-
-    // Update the lastLogin field
-    req.user.lastLogin = new Date();
-    await req.user.save();
-
-    // Create a JWT token
-    const token = createToken(_id);
-
-    res.status(200).json({
-      _id,
-      firstName,
-      lastName,
-      email,
-      token,
-      role,
-      avatar,
-      progress: req.user.progress,
-      achievement: req.user.achievement,
     });
   } catch (error) {
     res.status(400).json({ error: error.message });

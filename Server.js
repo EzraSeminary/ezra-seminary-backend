@@ -12,9 +12,9 @@ const userRoutes = require("./routes/userRoutes");
 const path = require("path");
 const courseController = require("./controllers/courseController");
 const quizController = require("./controllers/quizController");
-const userController = require("./controllers/usersController");
+// const userController = require("./controllers/usersController");
 const analyticsRoutes = require("./routes/analyticsRoutes");
-const requireAuth = require("./middleware/requireAuth");
+// const requireAuth = require("./middleware/requireAuth");
 const passport = require("./config/passport");
 const session = require("express-session");
 
@@ -58,21 +58,6 @@ app.use("/devotion", devotionRoutes);
 app.use("/course", courseController);
 app.use("/quiz", quizController);
 app.use("/analytics", analyticsRoutes);
-
-// Integrate routes for authentication
-app.get(
-  "/auth/google",
-  passport.authenticate("google", { scope: ["profile", "email"] })
-);
-app.get(
-  "/auth/google/callback",
-  passport.authenticate("google", {
-    failureRedirect: "/login",
-  }),
-  userController.googleLogin
-);
-
-app.post("/auth/google/verify", userController.verifyGoogleToken);
 
 // app.use("/images", express.static("public/images"));
 app.all("*", (req, res) => {
