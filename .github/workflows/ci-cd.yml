@@ -1,0 +1,43 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      # Fetch the main repository
+      - name: Fetch main repository
+        run: |
+          git remote add upstream https://github.com/Yidnekachew-cmd/ezra-test-backend.git
+          git fetch upstream
+
+      # Compare changes with main repo
+      - name: Compare changes
+        run: |
+          # Check for changes
+          git diff upstream/main..HEAD --name-only
+
+          # If there are changes, deploy them
+          if [ -n "$(git diff upstream/main..HEAD --name-only)" ]; then
+            echo "Changes detected, deploying to Digital Ocean..."
+
+            # Build and test the application
+            npm ci
+            npm run build
+            npm test
+
+            # Deploy the application
+            ssh root@64.23.192.24 "cd ezra-test-backend && git pull origin main && npm install && pm2 restart app"
+          else
+            echo "No changes detected, skipping deployment."
+          fi
+        env:
+          DO_SSH_PASSWORD: ${{ secrets.DO_SSH_PASSWORD }}
