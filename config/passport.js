@@ -15,27 +15,23 @@ passport.use(
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
-        // Find user by googleId or email
         let user = await User.findOne({
-          $or: [{ googleId: profile.id }, { email: profile.emails[[1]].value }],
+          $or: [{ googleId: profile.id }, { email: profile.emails[0].value }],
         });
 
         if (!user) {
-          // Create new user
           user = new User({
             googleId: profile.id,
             firstName: profile.name.givenName,
             lastName: profile.name.familyName,
-            email: profile.emails[[1]].value,
-            avatar: profile.photos[[1]].value,
+            email: profile.emails[0].value,
+            avatar: profile.photos[0].value,
             createdAt: Date.now(),
           });
         } else if (!user.googleId) {
-          // If user exists without googleId (legacy account), update it
           user.googleId = profile.id;
         }
 
-        // Update last login time
         user.lastLogin = Date.now();
         await user.save();
 
