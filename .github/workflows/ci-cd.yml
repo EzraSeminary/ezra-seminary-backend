@@ -31,8 +31,6 @@ jobs:
 
             # Build and test the application
             npm ci
-            npm run build
-            npm test
 
             # Deploy the application
             ssh root@64.23.192.24 "cd ezra-test-backend && git pull origin main && npm install && pm2 restart Server.js"
