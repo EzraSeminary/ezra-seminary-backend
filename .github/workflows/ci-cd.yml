@@ -1,32 +1,43 @@
-name: Build and Deploy
+name: CI/CD backend
 
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v2
-
-      - name: Setup Node.js environment
-        uses: actions/setup-node@v1
         with:
-          node-version: 14
+          fetch-depth: 0
 
-      - name: Install dependencies
-        run: npm install
+      # Fetch the main repository
+      - name: Fetch main repository
+        run: |
+          git remote add upstream https://github.com/Yidnekachew-cmd/ezra-test-backend.git
+          git fetch upstream
 
-      - name: Run build
-        run: npm run build
+      # Compare changes with main repo
+      - name: Compare changes
+        run: |
+          # Check for changes
+          git diff upstream/main..HEAD --name-only
 
-      - name: Deploy to Netlify
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: npm install netlify-cli -g && netlify deploy --prod --dir=dist
+          # If there are changes, deploy them
+          if [ -n "$(git diff upstream/main..HEAD --name-only)" ]; then
+            echo "Changes detected, deploying to Digital Ocean..."
+
+            # Build and test the application
+            npm ci
+            npm run build
+            npm test
+
+            # Deploy the application
+            ssh user@droplet.digitalocean.com "cd /path/to/your/project && git pull origin main && npm install && pm2 restart app"
+          else
+            echo "No changes detected, skipping deployment."
+          fi
         env:
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          DO_SSH_KEY: ${{ secrets.DO_SSH_KEY }}
