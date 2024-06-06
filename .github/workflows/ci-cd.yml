@@ -35,7 +35,7 @@ jobs:
             npm test
 
             # Deploy the application
-            ssh root@64.23.192.24 "cd ezra-test-backend && git pull origin main && npm install && pm2 restart app"
+            ssh root@64.23.192.24 "cd ezra-test-backend && git pull origin main && npm install && pm2 restart Server.js"
           else
             echo "No changes detected, skipping deployment."
           fi
