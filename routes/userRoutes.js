@@ -1,6 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const {
+  googleLogin,
+  verifyGoogleToken,
   loginUser,
   signupUser,
   updateUserProfile,
@@ -15,6 +17,7 @@ const {
 const contactController = require("../controllers/contactController");
 const requireAuth = require("../middleware/requireAuth");
 const upload = require("../middleware/upload");
+const passport = require("../config/passport");
 
 //login route
 router.post("/login", loginUser);
@@ -32,5 +35,18 @@ router.delete("/:id", deleteUser);
 router.post("/contact", contactController.sendContactMessage);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password/:token", resetPassword);
+
+router.get(
+  "/auth/google",
+  passport.authenticate("google", { scope: ["profile", "email"] })
+);
+
+router.get(
+  "/auth/google/callback",
+  passport.authenticate("google", { failureRedirect: "/login" }),
+  googleLogin
+);
+
+router.post("/auth/google/verify", verifyGoogleToken);
 
 module.exports = router;

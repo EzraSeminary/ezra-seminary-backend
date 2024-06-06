@@ -12,8 +12,23 @@ const userRoutes = require("./routes/userRoutes");
 const path = require("path");
 const courseController = require("./controllers/courseController");
 const quizController = require("./controllers/quizController");
+// const userController = require("./controllers/usersController");
 const analyticsRoutes = require("./routes/analyticsRoutes");
-const requireAuth = require("./middleware/requireAuth");
+// const requireAuth = require("./middleware/requireAuth");
+const passport = require("./config/passport");
+const session = require("express-session");
+
+app.use(
+  session({
+    secret: process.env.SECRET,
+    resave: false,
+    saveUninitialized: true,
+  })
+);
+
+// Initialize passport
+app.use(passport.initialize());
+app.use(passport.session());
 
 app.use(express.json({ limit: "50mb" }));
 
@@ -37,10 +52,6 @@ app.get("/download/:imageName", (req, res) => {
 });
 
 app.use("/", require("./routes/root"));
-// app.use((req, res, next) => {
-//   console.log(req.path, req.method);
-//   next();
-// });
 // All routes are authenticated by default
 app.use("/users", userRoutes);
 app.use("/devotion", devotionRoutes);

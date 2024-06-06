@@ -3,10 +3,90 @@ const jwt = require("jsonwebtoken");
 const { getAnalytics } = require("../controllers/analyticsController");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
+const { OAuth2Client } = require("google-auth-library");
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Create JWT
 const createToken = (_id) => {
   return jwt.sign({ _id }, process.env.SECRET, { expiresIn: "3d" });
+};
+
+// Google Login Controller
+const googleLogin = async (req, res) => {
+  try {
+    // The user object is already available in req.user from the passport.js configuration
+    const { _id, firstName, lastName, email, avatar, role } = req.user;
+
+    // Create JWT token
+    const token = createToken(_id);
+
+    res.status(200).json({
+      _id,
+      firstName,
+      lastName,
+      email,
+      token,
+      role,
+      avatar,
+      progress: req.user.progress,
+      achievement: req.user.achievement,
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+// Verify Google Token Controller
+const verifyGoogleToken = async (req, res) => {
+  try {
+    const { token: reqToken } = req.body;
+    const ticket = await client.verifyIdToken({
+      idToken: reqToken,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+    const userid = payload["sub"];
+
+    // Find user by googleId or email
+    let user = await User.findOne({
+      $or: [{ googleId: userid }, { email: payload.email }],
+    });
+
+    if (!user) {
+      user = new User({
+        googleId: userid,
+        firstName: payload["given_name"],
+        lastName: payload["family_name"],
+        email: payload["email"],
+        avatar: payload["picture"],
+        createdAt: Date.now(),
+      });
+    } else if (!user.googleId) {
+      // If user exists without googleId (legacy account), update it
+      user.googleId = userid;
+    }
+
+    // Update last login time
+    user.lastLogin = Date.now();
+    await user.save();
+
+    // Create JWT token
+    const token = createToken(user._id);
+
+    res.status(200).json({
+      _id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      token,
+      role: user.role,
+      avatar: user.avatar,
+      progress: user.progress,
+      achievement: user.achievement,
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
 };
 
 // Login Controller
@@ -310,8 +390,10 @@ const resetPassword = async (req, res) => {
 };
 
 module.exports = {
+  googleLogin,
   loginUser,
   signupUser,
+  verifyGoogleToken,
   updateUserProfile,
   getUserById,
   updateUserProgress,
