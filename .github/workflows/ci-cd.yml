@@ -37,5 +37,9 @@ jobs:
           else
             echo "No changes detected, skipping deployment."
           fi
+      - name: Add Digital Ocean SSH key to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H 64.23.192.24 >> ~/.ssh/known_hosts
         env:
           DO_SSH_PASSWORD: ${{ secrets.DO_SSH_PASSWORD }}
