@@ -46,7 +46,7 @@ jobs:
             npm ci
 
             # Deploy the application
-            doctl apps update ezra-test-backend --force-build
+            doctl apps update ezra-test-backend --wait
           else
             echo "No changes detected, skipping deployment."
           fi
