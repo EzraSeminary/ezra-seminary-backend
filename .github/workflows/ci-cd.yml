@@ -19,6 +19,19 @@ jobs:
           git remote add upstream https://github.com/Yidnekachew-cmd/ezra-test-backend.git
           git fetch upstream
 
+      # Install Digital Ocean CLI
+      - name: Install Digital Ocean CLI
+        run: |
+          curl -sL https://github.com/digitalocean/doctl/releases/download/v1.75.0/doctl-1.75.0-linux-amd64.tar.gz | tar -xzv
+          sudo mv doctl /usr/local/bin
+
+      # Authenticate with Digital Ocean
+      - name: Authenticate with Digital Ocean
+        env:
+          DO_API_TOKEN: ${{ secrets.DO_API_TOKEN }}
+        run: |
+          doctl auth init -t $DO_API_TOKEN
+
       # Compare changes with main repo
       - name: Compare changes
         run: |
@@ -33,13 +46,7 @@ jobs:
             npm ci
 
             # Deploy the application
-            ssh root@64.23.192.24 "cd ezra-test-backend && git pull origin main && npm install && pm2 restart Server.js"
+            doctl apps update ezra-test-backend --wait
           else
             echo "No changes detected, skipping deployment."
           fi
-      - name: Add Digital Ocean SSH key to known_hosts
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H 64.23.192.24 >> ~/.ssh/known_hosts
-        env:
-          DO_SSH_PASSWORD: ${{ secrets.DO_SSH_PASSWORD }}
