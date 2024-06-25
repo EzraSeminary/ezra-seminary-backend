@@ -21,10 +21,13 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  if (file.mimetype.startsWith("image/")) {
-    cb(null, true);
+  if (
+    file.mimetype.startsWith("image/") ||
+    file.mimetype.startsWith("audio/")
+  ) {
+    cb(null, true); // Accept file
   } else {
-    cb(new Error("Only image files are allowed"), false);
+    cb(new Error("Only image & audio files are allowed"), false); // Reject file
   }
 };
 
@@ -133,6 +136,7 @@ courseController.post("/create", upload.any(), async (req, res) => {
             };
           }
         }
+
         // If it's a mix type element
         if (element.type === "mix") {
           const fieldName = `chapter_${chapterIndex}_slide_${slideIndex}_mix_file`;
@@ -148,6 +152,19 @@ courseController.post("/create", upload.any(), async (req, res) => {
             };
           }
         }
+
+        // If it's an audio type element
+        if (element.type === "audio") {
+          const fieldName = `chapter_${chapterIndex}_slide_${slideIndex}_audio`;
+          const file = req.files.find((f) => f.fieldname === fieldName);
+          if (file) {
+            return {
+              ...element,
+              value: file.filename, // Correctly reference the filename here
+            };
+          }
+        }
+
         return element;
       }),
     })),
@@ -214,6 +231,7 @@ courseController.put("/update/:id", upload.any(), async (req, res) => {
       slides: chapter.slides.map((slide, slideIndex) => ({
         ...slide,
         elements: slide.elements.map((element) => {
+          // If it's an img type element
           if (element.type === "img") {
             const fieldName = `chapter_${chapterIndex}_slide_${slideIndex}_image`;
             const file = req.files.find((f) => f.fieldname === fieldName);
@@ -224,6 +242,19 @@ courseController.put("/update/:id", upload.any(), async (req, res) => {
               };
             }
           }
+
+          // If it's an audio type element
+          if (element.type === "audio") {
+            const fieldName = `chapter_${chapterIndex}_slide_${slideIndex}_audio`;
+            const file = req.files.find((f) => f.fieldname === fieldName);
+            if (file) {
+              return {
+                ...element,
+                value: file.filename,
+              };
+            }
+          }
+
           return element;
         }),
       })),
