@@ -21,10 +21,13 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  if (file.mimetype.startsWith("image/")) {
-    cb(null, true);
+  if (
+    file.mimetype.startsWith("image/") ||
+    file.mimetype.startsWith("audio/")
+  ) {
+    cb(null, true); // Accept file
   } else {
-    cb(new Error("Only image files are allowed"), false);
+    cb(new Error("Only image & audio files are allowed"), false); // Reject file
   }
 };
 
