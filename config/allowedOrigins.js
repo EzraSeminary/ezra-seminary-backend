@@ -9,6 +9,8 @@ const allowedOrigins = [
   "https://ezra-test-frontend.onrender.com/",
   "https://ezraseminary.netlify.app",
   "https://ezraseminary.netlify.app/",
+  "https://ezra-seminary.netlify.app",
+  "https://ezra-seminary.netlify.app/",
   "http://ezraseminary.org",
   "https://ezraseminary.org",
   "https://polite-sky-0f7f49103.5.azurestaticapps.net",
