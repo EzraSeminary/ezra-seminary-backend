@@ -9,6 +9,7 @@ const cors = require("cors");
 const corsOptions = require("./config/corsOptions");
 const devotionRoutes = require("./routes/devotionRoutes");
 const userRoutes = require("./routes/userRoutes");
+const sslRoutes = require("./routes/sslRoutes");
 const path = require("path");
 const courseController = require("./controllers/courseController");
 const quizController = require("./controllers/quizController");
