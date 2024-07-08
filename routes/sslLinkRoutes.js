@@ -1,17 +1,39 @@
-// routes/sslLinkRoutes.js
-
 const express = require("express");
 const router = express.Router();
 const VideoLink = require("../models/SSLVideoLink");
 
+// Add request body validation middleware
+const validateVideoLinkBody = (req, res, next) => {
+  const { year, quarter, lesson, videoUrl } = req.body;
+  console.log("Received data:", { year, quarter, lesson, videoUrl });
+
+  if (!year || !quarter || !lesson || !videoUrl) {
+    return res.status(400).json({ message: "Missing required fields" });
+  }
+  if (
+    typeof year !== "number" ||
+    typeof quarter !== "number" ||
+    typeof lesson !== "number"
+  ) {
+    return res
+      .status(400)
+      .json({ message: "year, quarter, and lesson must be numbers" });
+  }
+  if (typeof videoUrl !== "string") {
+    return res.status(400).json({ message: "videoUrl must be a string" });
+  }
+  next();
+};
+
 // Add a new video link
-router.post("/", async (req, res) => {
+router.post("/", validateVideoLinkBody, async (req, res) => {
   try {
     const { year, quarter, lesson, videoUrl } = req.body;
     const newVideoLink = new VideoLink({ year, quarter, lesson, videoUrl });
     await newVideoLink.save();
     res.status(201).json(newVideoLink);
   } catch (error) {
+    console.error("Error adding video link:", error);
     res.status(400).json({ message: error.message });
   }
 });
