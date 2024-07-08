@@ -65,10 +65,17 @@ router.put("/:quarter/:lesson", async (req, res) => {
     const { videoUrl } = req.body;
     const currentYear = new Date().getFullYear();
     const updatedLink = await VideoLink.findOneAndUpdate(
-      { year: currentYear, quarter, lesson },
+      {
+        year: currentYear,
+        quarter: parseInt(quarter),
+        lesson: parseInt(lesson),
+      },
       { videoUrl },
-      { new: true, upsert: true }
+      { new: true }
     );
+    if (!updatedLink) {
+      return res.status(404).json({ message: "Video link not found" });
+    }
     res.json(updatedLink);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -80,7 +87,14 @@ router.delete("/:quarter/:lesson", async (req, res) => {
   try {
     const { quarter, lesson } = req.params;
     const currentYear = new Date().getFullYear();
-    await VideoLink.findOneAndDelete({ year: currentYear, quarter, lesson });
+    const deletedLink = await VideoLink.findOneAndDelete({
+      year: currentYear,
+      quarter: parseInt(quarter),
+      lesson: parseInt(lesson),
+    });
+    if (!deletedLink) {
+      return res.status(404).json({ message: "Video link not found" });
+    }
     res.status(204).send();
   } catch (error) {
     res.status(500).json({ message: error.message });
