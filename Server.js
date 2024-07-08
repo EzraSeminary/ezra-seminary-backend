@@ -58,6 +58,7 @@ app.use("/devotion", devotionRoutes);
 app.use("/course", courseController);
 app.use("/quiz", quizController);
 app.use("/analytics", analyticsRoutes);
+app.use("/ssl", sslRoutes);
 
 // app.use("/images", express.static("public/images"));
 app.all("*", (req, res) => {
