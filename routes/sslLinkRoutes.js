@@ -1,7 +1,7 @@
 // routes/videoLinks.js
 const express = require("express");
 const router = express.Router();
-const VideoLink = require("../models/VideoLink");
+const VideoLink = require("../models/SSLVideoLink");
 
 // Add a new video link
 router.post("/", async (req, res) => {

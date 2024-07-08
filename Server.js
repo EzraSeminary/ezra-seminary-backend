@@ -9,7 +9,7 @@ const cors = require("cors");
 const corsOptions = require("./config/corsOptions");
 const devotionRoutes = require("./routes/devotionRoutes");
 const userRoutes = require("./routes/userRoutes");
-const sslRoutes = require("./routes/sslRoutes");
+const sslLinkRoutes = require("./routes/sslLinkRoutes");
 const path = require("path");
 const courseController = require("./controllers/courseController");
 const quizController = require("./controllers/quizController");
@@ -59,7 +59,7 @@ app.use("/devotion", devotionRoutes);
 app.use("/course", courseController);
 app.use("/quiz", quizController);
 app.use("/analytics", analyticsRoutes);
-app.use("/ssl", sslRoutes);
+app.use("/sslLinks", sslLinkRoutes);
 
 // app.use("/images", express.static("public/images"));
 app.all("*", (req, res) => {
