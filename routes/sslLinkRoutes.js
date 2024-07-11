@@ -2,7 +2,6 @@ const express = require("express");
 const router = express.Router();
 const VideoLink = require("../models/SSLVideoLink");
 
-// Add request body validation middleware
 const validateVideoLinkBody = (req, res, next) => {
   const { year, quarter, lesson, videoUrl } = req.body;
   console.log("Received data:", { year, quarter, lesson, videoUrl });
@@ -19,16 +18,26 @@ const validateVideoLinkBody = (req, res, next) => {
       .status(400)
       .json({ message: "year, quarter, and lesson must be numbers" });
   }
+  if (quarter < 1 || quarter > 4) {
+    return res.status(400).json({ message: "quarter must be between 1 and 4" });
+  }
   if (typeof videoUrl !== "string") {
     return res.status(400).json({ message: "videoUrl must be a string" });
   }
   next();
 };
 
-// Add a new video link
 router.post("/", validateVideoLinkBody, async (req, res) => {
   try {
     const { year, quarter, lesson, videoUrl } = req.body;
+    console.log(" { year, quarter, lesson, videoUrl } ");
+
+    const existingLink = await VideoLink.findOne({ year, quarter, lesson });
+    if (existingLink) {
+      existingLink.videoUrl = videoUrl;
+      await existingLink.save();
+      return res.status(200).json(existingLink);
+    }
     const newVideoLink = new VideoLink({ year, quarter, lesson, videoUrl });
     await newVideoLink.save();
     res.status(201).json(newVideoLink);
@@ -38,16 +47,13 @@ router.post("/", validateVideoLinkBody, async (req, res) => {
   }
 });
 
-// Get video link for a specific lesson
 router.get("/:quarter/:lesson", async (req, res) => {
   try {
     const { quarter, lesson } = req.params;
-    const currentYear = new Date().getFullYear();
     const videoLink = await VideoLink.findOne({
-      year: currentYear,
-      quarter,
-      lesson,
-    });
+      quarter: parseInt(quarter),
+      lesson: parseInt(lesson),
+    }).sort({ year: -1 }); // Get the most recent link if multiple exist
     if (videoLink) {
       res.json(videoLink);
     } else {
@@ -58,15 +64,16 @@ router.get("/:quarter/:lesson", async (req, res) => {
   }
 });
 
-// Update a video link
-// Update a video link
-router.put("/:quarter/:lesson", async (req, res) => {
+router.put("/:year/:quarter/:lesson", async (req, res) => {
   try {
-    const { quarter, lesson } = req.params;
+    const { year, quarter, lesson } = req.params;
     const { videoUrl } = req.body;
-    const currentYear = new Date().getFullYear();
     const updatedLink = await VideoLink.findOneAndUpdate(
-      { year: currentYear, quarter: parseInt(quarter), lesson: parseInt(lesson) },
+      {
+        year: parseInt(year),
+        quarter: parseInt(quarter),
+        lesson: parseInt(lesson),
+      },
       { videoUrl },
       { new: true }
     );
@@ -79,15 +86,13 @@ router.put("/:quarter/:lesson", async (req, res) => {
   }
 });
 
-// Delete a video link
-router.delete("/:quarter/:lesson", async (req, res) => {
+router.delete("/:year/:quarter/:lesson", async (req, res) => {
   try {
-    const { quarter, lesson } = req.params;
-    const currentYear = new Date().getFullYear();
+    const { year, quarter, lesson } = req.params;
     const deletedLink = await VideoLink.findOneAndDelete({
-      year: currentYear,
+      year: parseInt(year),
       quarter: parseInt(quarter),
-      lesson: parseInt(lesson)
+      lesson: parseInt(lesson),
     });
     if (!deletedLink) {
       return res.status(404).json({ message: "Video link not found" });
@@ -97,6 +102,5 @@ router.delete("/:quarter/:lesson", async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
-
 
 module.exports = router;

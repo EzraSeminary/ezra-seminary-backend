@@ -8,7 +8,6 @@ const VideoLinkSchema = new mongoose.Schema({
   videoUrl: { type: String, required: true },
 });
 
-// Compound index to ensure uniqueness of year-quarter-lesson combination
 VideoLinkSchema.index({ year: 1, quarter: 1, lesson: 1 }, { unique: true });
 
 module.exports = mongoose.model("VideoLink", VideoLinkSchema);
