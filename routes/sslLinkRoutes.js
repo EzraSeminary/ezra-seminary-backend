@@ -107,7 +107,9 @@ router.delete("/:year/:quarter/:lesson", async (req, res) => {
     });
 
     if (deletedLink) {
-      return res.status(204).send();
+      return res
+        .status(200)
+        .json({ message: "Video link successfully deleted" });
     } else {
       return res.status(404).json({ message: "Video link not found" });
     }
