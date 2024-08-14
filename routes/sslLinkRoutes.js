@@ -1,6 +1,7 @@
 const VideoLink = require("../models/SSLVideoLink");
 const express = require("express");
 const router = express.Router();
+const requireAdmin = require("../middleware/requireAdmin");
 
 // Middleware to validate video link data from req.body
 const validateVideoLinkBody = (req, res, next) => {
@@ -29,7 +30,7 @@ const validateVideoLinkBody = (req, res, next) => {
 };
 
 // Add a video link or update if it exists
-router.post("/", validateVideoLinkBody, async (req, res) => {
+router.post("/", requireAdmin, validateVideoLinkBody, async (req, res) => {
   try {
     const { year, quarter, lesson, videoUrl } = req.body;
     let existingLink = await VideoLink.findOne({ year, quarter, lesson });
@@ -67,7 +68,7 @@ router.get("/:year/:quarter/:lesson", async (req, res) => {
 });
 
 // Update a video link based on year, quarter, and lesson
-router.put("/:year/:quarter/:lesson", async (req, res) => {
+router.put("/:year/:quarter/:lesson", requireAdmin, async (req, res) => {
   try {
     const { year, quarter, lesson } = req.params;
     const { videoUrl } = req.body;
@@ -94,7 +95,7 @@ router.put("/:year/:quarter/:lesson", async (req, res) => {
 });
 
 // Delete a video link based on year, quarter, and lesson
-router.delete("/:year/:quarter/:lesson", async (req, res) => {
+router.delete("/:year/:quarter/:lesson", requireAdmin, async (req, res) => {
   try {
     const year = parseInt(req.params.year);
     const quarter = parseInt(req.params.quarter);
