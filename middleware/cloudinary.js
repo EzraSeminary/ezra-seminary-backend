@@ -2,9 +2,9 @@
 const cloudinary = require("cloudinary").v2;
 
 cloudinary.config({
-  cloud_name: "your-cloud-name",
-  api_key: "your-api-key",
-  api_secret: "your-api-secret",
+  cloud_name: "dy233t3yl",
+  api_key: "737799364788289",
+  api_secret: "vnIYVSSiA5D3PVtRL22gt8i9zjE",
 });
 
 const uploadImage = async (file) => {
