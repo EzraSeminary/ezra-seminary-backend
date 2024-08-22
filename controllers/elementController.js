@@ -1,6 +1,31 @@
-const { cloudinary, uploadImage } = require("../middleware/cloudinary");
+const multer = require("multer");
 const Element = require("../models/Element");
 const elementController = require("express").Router();
+
+// image upload
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "public/images");
+  },
+  filename: (req, file, cb) => {
+    const timestamp = new Date().toISOString().replace(/:/g, "-");
+    cb(null, `${timestamp}-${file.originalname}`);
+  },
+});
+
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith("image/")) {
+    cb(null, true);
+  } else {
+    cb(new Error("Only image files are allowed"), false);
+  }
+};
+
+const upload = multer({
+  storage: storage,
+  fileFilter: fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB limit
+});
 
 // get all courses
 elementController.get("/getall", async (req, res) => {
@@ -14,25 +39,10 @@ elementController.get("/getall", async (req, res) => {
 });
 
 // create courses
-elementController.post("/create", async (req, res) => {
+elementController.post("/create", upload.any(), async (req, res) => {
   const elements = [];
   const files = req.files;
   const imageIds = JSON.parse(req.body.imageIds);
-
-  const imageUploadPromises = imageIds.map(async (imageId, index) => {
-    const publicId = await uploadImage(files[index]);
-    return {
-      type: "img",
-      id: imageId,
-      value: publicId,
-    };
-  });
-
-  const imageElements = await Promise.all(imageUploadPromises);
-  imageElements.forEach((imageElement) => {
-    const position = elements.findIndex((el) => el.id > imageElement.id);
-    elements.splice(position, 0, imageElement);
-  });
 
   for (let key in req.body) {
     if (key !== "images" && key !== "imageIds") {
@@ -44,6 +54,16 @@ elementController.post("/create", async (req, res) => {
       elements.push(element);
     }
   }
+
+  imageIds.forEach((imageId, index) => {
+    const element = {
+      type: "img",
+      id: imageId,
+      value: files[index].filename,
+    };
+    const position = elements.findIndex((el) => el.id > imageId);
+    elements.splice(position, 0, element);
+  });
 
   try {
     const newCourse = new Element({ elements });
