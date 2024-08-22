@@ -1,4 +1,4 @@
-const { cloudinary, uploadImage } = require("./cloudinary");
+const { cloudinary, uploadImage } = require("../middleware/cloudinary");
 const Course = require("../models/Course");
 const courseController = require("express").Router();
 const verifyJWT = require("../middleware/requireAuth");

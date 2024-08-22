@@ -16,16 +16,59 @@ const {
 } = require("../controllers/usersController");
 const contactController = require("../controllers/contactController");
 const requireAuth = require("../middleware/requireAuth");
-const upload = require("../middleware/upload");
-const passport = require("../config/passport");
+const { cloudinary, uploadImage } = require("../cloudinary");
 
 //login route
 router.post("/login", loginUser);
 //signup route
-router.post("/signup", upload.single("avatar"), signupUser);
-router
-  .route("/profile/:id")
-  .put(requireAuth, upload.single("avatar"), updateUserProfile);
+router.post("/signup", async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+    const file = req.files?.avatar;
+
+    const avatarPublicId = file ? await uploadImage(file) : null;
+
+    const newUser = new User({
+      name,
+      email,
+      password,
+      avatar: avatarPublicId,
+    });
+
+    await newUser.save();
+    res.status(201).json(newUser);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+router.route("/profile/:id").put(requireAuth, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const { name, email, bio } = req.body;
+    const file = req.files?.avatar;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const avatarPublicId = file ? await uploadImage(file) : user.avatar;
+
+    user.name = name || user.name;
+    user.email = email || user.email;
+    user.bio = bio || user.bio;
+    user.avatar = avatarPublicId;
+
+    await user.save();
+    res.status(200).json(user);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 router.get("/get/:id", getUserById);
 router.put("/progress", requireAuth, updateUserProgress);
 router.get("/current", requireAuth, getCurrentUser);

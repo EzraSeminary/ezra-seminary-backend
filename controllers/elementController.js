@@ -1,4 +1,4 @@
-const { cloudinary, uploadImage } = require("./cloudinary");
+const { cloudinary, uploadImage } = require("../middleware/cloudinary");
 const Element = require("../models/Element");
 const elementController = require("express").Router();
 
