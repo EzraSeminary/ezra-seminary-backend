@@ -1,15 +1,9 @@
-const multer = require("multer");
-const path = require("path");
+// middleware/upload.js
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, "../public", "images"));
-  },
-  filename: (req, file, cb) => {
-    const timestamp = new Date().toISOString().replace(/:/g, "-");
-    cb(null, `${timestamp}-${file.originalname}`);
-  },
-});
+const multer = require("multer");
+
+const storage = multer.memoryStorage(); // Store files in memory instead of on disk
+
 const fileFilter = (req, file, cb) => {
   if (file.mimetype.startsWith("image/")) {
     cb(null, true);

@@ -1,4 +1,5 @@
 // cloudinary configuration
+
 const cloudinary = require("cloudinary").v2;
 
 cloudinary.config({
@@ -9,8 +10,17 @@ cloudinary.config({
 
 const uploadImage = async (file) => {
   try {
-    const result = await cloudinary.uploader.upload(file.path);
-    return result.public_id;
+    const result = await cloudinary.uploader.upload_stream(
+      { resource_type: "auto" },
+      function (error, result) {
+        if (error) {
+          console.error("Upload failed:", error);
+          throw error;
+        }
+        return result;
+      }
+    );
+    return result.secure_url; // Return the secure URL for the uploaded image
   } catch (error) {
     console.error("Error uploading image to Cloudinary:", error);
     throw error;
