@@ -10,16 +10,10 @@ cloudinary.config({
 
 const uploadImage = async (file) => {
   try {
-    const result = await cloudinary.uploader.upload_stream(
-      { resource_type: "auto" },
-      function (error, result) {
-        if (error) {
-          console.error("Upload failed:", error);
-          throw error;
-        }
-        return result;
-      }
-    );
+    // Note: file.buffer will contain the contents when using memoryStorage
+    const result = await cloudinary.uploader.upload(file.buffer, {
+      resource_type: "auto",
+    });
     return result.secure_url; // Return the secure URL for the uploaded image
   } catch (error) {
     console.error("Error uploading image to Cloudinary:", error);

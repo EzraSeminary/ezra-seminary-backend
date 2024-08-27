@@ -1,7 +1,7 @@
 // controllers/devotionController.js
 
 const Devotion = require("../models/Devotion");
-const { uploadImage } = require("../cloudinary"); // Make sure to require your new uploadImage function
+const { uploadImage } = require("../middleware/cloudinary"); // Make sure to require your new uploadImage function
 
 const createDevotion = async (req, res) => {
   try {
