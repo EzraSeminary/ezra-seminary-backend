@@ -21,13 +21,13 @@ const requireAuth = async (req, res, next) => {
     req.user = user;
 
     // Allow access based on the user's role
-    if (user.role === "Admin") {
+    if (user.role === "Admin" || "Instructor") {
       // Admin has full access
       next();
     } else if (user.role === "Learner") {
       // Learner can access their own profile or any other route
       if (req.params.id && req.params.id !== user._id.toString()) {
-        // Learner is trying to update another Learner's profile
+        // Learner is trying to update another user's profile
         return res.status(403).json({ error: "Forbidden" });
       } else {
         // Learner is updating their own profile or accessing any other route

@@ -165,8 +165,11 @@ const updateUserProfile = async (req, res) => {
     const user = await User.findById(userId);
 
     if (user) {
-      // Allow Learner to update their own profile
-      if (req.user.role === "Learner" && req.user._id.toString() !== userId) {
+      // Allow Learner and Instructor to update their own profile
+      if (
+        (req.user.role === "Learner" || req.user.role === "Instructor") &&
+        req.user._id.toString() !== userId
+      ) {
         return res.status(403).json({ error: "Forbidden" });
       }
 
