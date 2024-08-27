@@ -5,6 +5,7 @@ const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 const { OAuth2Client } = require("google-auth-library");
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const { uploadImage } = require("../middleware/cloudinary-users");
 
 // Create JWT
 const createToken = (_id) => {
@@ -124,12 +125,12 @@ const signupUser = async (req, res) => {
   const { firstName, lastName, email, password, role } = req.body;
   let avatar = "default-avatar.jpg"; // Set a default avatar
 
-  if (req.file) {
-    // File was uploaded successfully
-    avatar = req.file.filename;
-  }
-
   try {
+    if (req.file) {
+      const uploadResult = await uploadImage(req.file, "UserImage");
+      avatar = uploadResult;
+    }
+
     const user = await User.signup(
       firstName,
       lastName,
@@ -156,6 +157,7 @@ const signupUser = async (req, res) => {
   }
 };
 
+// Update User Profile Controller
 const updateUserProfile = async (req, res) => {
   const userId = req.params.id;
 
@@ -172,8 +174,13 @@ const updateUserProfile = async (req, res) => {
       user.firstName = req.body.firstName || user.firstName;
       user.lastName = req.body.lastName || user.lastName;
       user.email = req.body.email || user.email;
-      user.avatar = req.file ? req.file.filename : user.avatar;
-      user.role = req.body.role || user.role; // Update the role if provided in the request
+
+      if (req.file) {
+        const uploadResult = await uploadImage(req.file, "UserImage");
+        user.avatar = uploadResult;
+      }
+
+      user.role = req.body.role || user.role;
 
       if (req.body.password) {
         user.password = req.body.password;
