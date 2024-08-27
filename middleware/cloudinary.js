@@ -10,8 +10,17 @@ cloudinary.config({
 
 const uploadImage = (file) => {
   return new Promise((resolve, reject) => {
+    // Get the original file name without path and extension
+    const originalName = file.originalname.split(".")[0]; // get the name before extension
+    const extension = file.originalname.split(".").pop(); // get extension
+    const publicId = `${originalName}`; // you can adjust this to include folders or timestamps if necessary
+
     const stream = cloudinary.uploader.upload_stream(
-      { resource_type: "auto" },
+      {
+        resource_type: "auto",
+        public_id: publicId, // Use the original file name
+        folder: "Devotion", // Upload to the 'Devotion' folder
+      },
       (error, result) => {
         if (error) {
           console.error("Upload failed:", error);
