@@ -1,21 +1,44 @@
-const express = require("express");
+const multer = require("multer");
 const Element = require("../models/Element");
-const elementController = express.Router();
-const upload = require("../middleware/upload");
-const uploadImage = require("../middleware/cloudinary-course");
+const elementController = require("express").Router();
 
-// Get all elements
+// image upload
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "public/images");
+  },
+  filename: (req, file, cb) => {
+    const timestamp = new Date().toISOString().replace(/:/g, "-");
+    cb(null, `${timestamp}-${file.originalname}`);
+  },
+});
+
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith("image/")) {
+    cb(null, true);
+  } else {
+    cb(new Error("Only image files are allowed"), false);
+  }
+};
+
+const upload = multer({
+  storage: storage,
+  fileFilter: fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB limit
+});
+
+// get all courses
 elementController.get("/getall", async (req, res) => {
   try {
-    const elements = await Element.find({});
-    res.status(200).json(elements);
+    const courses = await Element.find({});
+    res.status(200).json(courses);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server error" });
   }
 });
 
-// Create element
+// create courses
 elementController.post("/create", upload.any(), async (req, res) => {
   const elements = [];
   const files = req.files;
@@ -32,22 +55,20 @@ elementController.post("/create", upload.any(), async (req, res) => {
     }
   }
 
-  try {
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const url = await uploadImage(file, "Courses");
-      const element = {
-        type: "img",
-        id: imageIds[i],
-        value: url,
-      };
-      const position = elements.findIndex((el) => el.id > imageIds[i]);
-      elements.splice(position, 0, element);
-    }
+  imageIds.forEach((imageId, index) => {
+    const element = {
+      type: "img",
+      id: imageId,
+      value: files[index].filename,
+    };
+    const position = elements.findIndex((el) => el.id > imageId);
+    elements.splice(position, 0, element);
+  });
 
-    const newElement = new Element({ elements });
-    await newElement.save();
-    res.status(201).json(newElement);
+  try {
+    const newCourse = new Element({ elements });
+    await newCourse.save();
+    res.status(201).json(newCourse);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server error" });
