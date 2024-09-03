@@ -1,4 +1,4 @@
-// cloudinary configuration
+// cloudinary configuration for devotion saving
 
 const cloudinary = require("cloudinary").v2;
 

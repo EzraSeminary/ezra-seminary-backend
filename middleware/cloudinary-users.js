@@ -1,4 +1,4 @@
-// cloudinary configuration
+// cloudinary configuration for user image saving
 
 const cloudinary = require("cloudinary").v2;
 
