@@ -1,21 +1,17 @@
+// middleware/upload.js
+
 const multer = require("multer");
-const path = require("path");
 
+const storage = multer.memoryStorage();
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, "../public", "images"));
-  },
-  filename: (req, file, cb) => {
-    const timestamp = new Date().toISOString().replace(/:/g, "-");
-    cb(null, `${timestamp}-${file.originalname}`);
-  },
-});
 const fileFilter = (req, file, cb) => {
-  if (file.mimetype.startsWith("image/")) {
+  if (
+    file.mimetype.startsWith("image/") ||
+    file.mimetype.startsWith("audio/")
+  ) {
     cb(null, true);
   } else {
-    cb(new Error("Only image files are allowed"), false);
+    cb(new Error("Only image and audio files are allowed"), false);
   }
 };
 

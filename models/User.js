@@ -11,7 +11,7 @@ const userSchema = new Schema({
   password: { type: String, required: false },
   role: {
     type: String,
-    enum: ["Learner", "Admin"], // Ensure the role is either 'Learner' or 'Admin'
+    enum: ["Learner", "Admin", "Instructor"], // Ensure the role is either 'Learner', 'Instructor" or 'Admin'
     default: "Learner", // Default role is 'Learner'
   },
   avatar: { type: String, default: "default-avatar.jpg" },

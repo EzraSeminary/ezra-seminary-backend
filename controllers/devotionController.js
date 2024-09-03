@@ -1,6 +1,7 @@
 // controllers/devotionController.js
 
 const Devotion = require("../models/Devotion");
+const { uploadImage } = require("../middleware/cloudinary"); // Make sure to require your new uploadImage function
 
 const createDevotion = async (req, res) => {
   try {
@@ -11,7 +12,13 @@ const createDevotion = async (req, res) => {
       .filter((key) => key.startsWith("paragraph"))
       .map((key) => req.body[key]);
 
-    const image = req.file ? req.file.filename : null;
+    let image = null;
+    // Check if there is an image file sent in the request
+    if (req.file) {
+      // Upload image to Cloudinary
+      const uploadResult = await uploadImage(req.file); // Pass the file to the upload function
+      image = uploadResult; // Get public_id or secure_url depending on what you need
+    }
 
     const devotion = new Devotion({
       month,
@@ -21,7 +28,7 @@ const createDevotion = async (req, res) => {
       verse,
       body: paragraphs,
       prayer,
-      image,
+      image, // This will contain the Cloudinary URL
     });
 
     const savedDevotion = await devotion.save();
@@ -68,7 +75,11 @@ const updateDevotion = async (req, res) => {
       .filter((key) => key.startsWith("paragraph"))
       .map((key) => req.body[key]);
 
-    const image = req.file ? req.file.filename : null;
+    let image = null;
+    if (req.file) {
+      const uploadResult = await uploadImage(req.file);
+      image = uploadResult;
+    }
 
     const updatedDevotion = await Devotion.findByIdAndUpdate(
       id,
