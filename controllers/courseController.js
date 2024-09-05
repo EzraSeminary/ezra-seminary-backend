@@ -120,10 +120,18 @@ courseController.post("/create", upload.any(), async (req, res) => {
           ...slide,
           elements: await Promise.all(
             slide.elements.map(async (element) => {
-              if (
-                element.type === "img" ||
+              if (element.type === "img") {
+                const fieldName = `chapter_${chapterIndex}_slide_${slideIndex}_img`;
+                const file = files.find((f) => f.fieldname === fieldName);
+                if (file) {
+                  return { ...element, value: file.path };
+                } else if (element.value && element.value.startsWith("http")) {
+                  // If it's a URL, keep it as is
+                  return element;
+                }
+              } else if (
                 element.type === "audio" ||
-                (element.type === "mix" && element.value.file)
+                (element.type === "mix" && element.value && element.value.file)
               ) {
                 const fieldName = `chapter_${chapterIndex}_slide_${slideIndex}_${
                   element.type === "mix" ? "mix_file" : element.type
@@ -134,14 +142,12 @@ courseController.post("/create", upload.any(), async (req, res) => {
                     ...element,
                     value:
                       element.type === "mix"
-                        ? {
-                            ...element.value,
-                            file: file.path,
-                          }
+                        ? { ...element.value, file: file.path }
                         : file.path,
                   };
                 }
               }
+              // Preserve existing value if no new file is uploaded
               return element;
             })
           ),
