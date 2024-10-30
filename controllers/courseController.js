@@ -19,7 +19,7 @@ const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
     folder: "Courses",
-    allowed_formats: ["jpg", "png", "jpeg", "gif", "mp3", "wav"],
+    allowed_formats: ["jpg", "png", "jpeg", "gif", "mp3", "wav", "webp"],
     resource_type: "auto",
     public_id: (req, file) => {
       const originalName = path.parse(file.originalname).name;
