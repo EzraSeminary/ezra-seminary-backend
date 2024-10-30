@@ -268,7 +268,9 @@ courseController.delete("/delete/:id", async (req, res) => {
 
     // Delete associated files from Cloudinary
     await Promise.all([
-      cloudinary.uploader.destroy(course.image),
+      cloudinary.uploader.destroy(course.image).catch((err) => {
+        console.error("Failed to delete course image:", err);
+      }),
       ...course.chapters.flatMap((chapter) =>
         chapter.slides.flatMap((slide) =>
           slide.elements
@@ -279,9 +281,13 @@ courseController.delete("/delete/:id", async (req, res) => {
                 (element.type === "mix" && element.value.file)
             )
             .map((element) =>
-              cloudinary.uploader.destroy(
-                element.type === "mix" ? element.value.file : element.value
-              )
+              cloudinary.uploader
+                .destroy(
+                  element.type === "mix" ? element.value.file : element.value
+                )
+                .catch((err) => {
+                  console.error("Failed to delete element file:", err);
+                })
             )
         )
       ),
