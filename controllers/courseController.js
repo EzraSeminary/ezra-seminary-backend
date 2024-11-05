@@ -98,7 +98,7 @@ courseController.get("/getchapter/:courseId/:chapterId", async (req, res) => {
 
 // create course
 courseController.post("/create", upload.any(), async (req, res) => {
-  const { title, description, published } = req.body;
+  const { title, description, category, published } = req.body;
   const files = req.files || [];
 
   let chapters;
@@ -163,11 +163,11 @@ courseController.post("/create", upload.any(), async (req, res) => {
     const newCourse = new Course({
       title,
       description,
+      category,
       image: imageUrl,
       chapters: updatedChapters,
       published,
     });
-
     await newCourse.save();
     res.status(201).json(newCourse);
   } catch (error) {
@@ -180,7 +180,7 @@ courseController.post("/create", upload.any(), async (req, res) => {
 courseController.put("/update/:id", upload.any(), async (req, res) => {
   try {
     const courseId = req.params.id;
-    const { title, description, published } = req.body;
+    const { title, description, category, published } = req.body;
     const files = req.files || [];
 
     const course = await Course.findById(courseId);
@@ -239,6 +239,7 @@ courseController.put("/update/:id", upload.any(), async (req, res) => {
 
     course.title = title || course.title;
     course.description = description || course.description;
+    course.category = category || course.category;
     course.published = published || course.published;
     course.chapters =
       updatedChapters.length > 0 ? updatedChapters : course.chapters;
