@@ -19,7 +19,7 @@ const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
     folder: "Courses",
-    allowed_formats: ["jpg", "png", "jpeg", "gif", "mp3", "wav"],
+    allowed_formats: ["jpg", "png", "jpeg", "gif", "mp3", "wav", "webp"],
     resource_type: "auto",
     public_id: (req, file) => {
       const originalName = path.parse(file.originalname).name;
@@ -98,7 +98,7 @@ courseController.get("/getchapter/:courseId/:chapterId", async (req, res) => {
 
 // create course
 courseController.post("/create", upload.any(), async (req, res) => {
-  const { title, description, published } = req.body;
+  const { title, description, category, published } = req.body;
   const files = req.files || [];
 
   let chapters;
@@ -163,11 +163,11 @@ courseController.post("/create", upload.any(), async (req, res) => {
     const newCourse = new Course({
       title,
       description,
+      category,
       image: imageUrl,
       chapters: updatedChapters,
       published,
     });
-
     await newCourse.save();
     res.status(201).json(newCourse);
   } catch (error) {
@@ -180,7 +180,7 @@ courseController.post("/create", upload.any(), async (req, res) => {
 courseController.put("/update/:id", upload.any(), async (req, res) => {
   try {
     const courseId = req.params.id;
-    const { title, description, published } = req.body;
+    const { title, description, category, published } = req.body;
     const files = req.files || [];
 
     const course = await Course.findById(courseId);
@@ -239,6 +239,7 @@ courseController.put("/update/:id", upload.any(), async (req, res) => {
 
     course.title = title || course.title;
     course.description = description || course.description;
+    course.category = category || course.category;
     course.published = published || course.published;
     course.chapters =
       updatedChapters.length > 0 ? updatedChapters : course.chapters;
@@ -268,7 +269,9 @@ courseController.delete("/delete/:id", async (req, res) => {
 
     // Delete associated files from Cloudinary
     await Promise.all([
-      cloudinary.uploader.destroy(course.image),
+      cloudinary.uploader.destroy(course.image).catch((err) => {
+        console.error("Failed to delete course image:", err);
+      }),
       ...course.chapters.flatMap((chapter) =>
         chapter.slides.flatMap((slide) =>
           slide.elements
@@ -279,9 +282,13 @@ courseController.delete("/delete/:id", async (req, res) => {
                 (element.type === "mix" && element.value.file)
             )
             .map((element) =>
-              cloudinary.uploader.destroy(
-                element.type === "mix" ? element.value.file : element.value
-              )
+              cloudinary.uploader
+                .destroy(
+                  element.type === "mix" ? element.value.file : element.value
+                )
+                .catch((err) => {
+                  console.error("Failed to delete element file:", err);
+                })
             )
         )
       ),
