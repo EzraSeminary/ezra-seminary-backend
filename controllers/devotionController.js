@@ -75,26 +75,24 @@ const updateDevotion = async (req, res) => {
       .filter((key) => key.startsWith("paragraph"))
       .map((key) => req.body[key]);
 
-    let image = null;
+    const updateData = {
+      month,
+      day,
+      title,
+      chapter,
+      verse,
+      body: paragraphs,
+      prayer,
+    };
+
     if (req.file) {
       const uploadResult = await uploadImage(req.file);
-      image = uploadResult;
+      updateData.image = uploadResult;
     }
 
-    const updatedDevotion = await Devotion.findByIdAndUpdate(
-      id,
-      {
-        month,
-        day,
-        title,
-        chapter,
-        verse,
-        body: paragraphs,
-        prayer,
-        image,
-      },
-      { new: true }
-    );
+    const updatedDevotion = await Devotion.findByIdAndUpdate(id, updateData, {
+      new: true,
+    });
 
     if (!updatedDevotion) {
       return res.status(404).json({ error: "Devotion not found" });
