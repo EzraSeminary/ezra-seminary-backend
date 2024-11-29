@@ -47,8 +47,20 @@ const upload = multer({
 // get all courses
 courseController.get("/getall", async (req, res) => {
   try {
-    const courses = await Course.find({});
-    res.status(200).json(courses);
+    const courses = await Course.find({}).select("-chapters");
+
+    // Get the chapter count for each course
+    const coursesWithChapterCount = await Promise.all(
+      courses.map(async (course) => {
+        const fullCourse = await Course.findById(course._id);
+        return {
+          ...course.toObject(),
+          chapterCount: fullCourse.chapters.length,
+        };
+      })
+    );
+
+    res.status(200).json(coursesWithChapterCount);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server error" });
