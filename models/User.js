@@ -69,10 +69,11 @@ userSchema.statics.signup = async function (
     avatar,
   });
 
-  if (password) {
-    const salt = await bcrypt.genSalt(10);
-    user.password = await bcrypt.hash(password, salt);
-  }
+  // I Removed manual hashing and let the pre-save hook handle it
+  // if (password) {
+  //   const salt = await bcrypt.genSalt(10);
+  //   user.password = await bcrypt.hash(password, salt);
+  // }
 
   await user.save();
   return user;
