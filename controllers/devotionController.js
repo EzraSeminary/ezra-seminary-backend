@@ -42,11 +42,26 @@ const createDevotion = async (req, res) => {
 
 const getDevotions = async (req, res) => {
   try {
-    const devotions = await Devotion.find().sort("-createdAt");
+    // Destructure and set default values for query parameters
+    let { limit = 0, sort = "desc" } = req.query;
+
+    // Validate 'limit' parameter to ensure it's a non-negative integer
+    limit = parseInt(limit, 10);
+    if (isNaN(limit) || limit < 0) {
+      return res.status(400).json({ error: "Invalid 'limit' parameter" });
+    }
+
+    // Validate 'sort' parameter
+    const sortOrder = sort.toLowerCase() === "asc" ? 1 : -1;
+
+    // Fetch devotions from the database with applied sorting and limit
+    const devotions = await Devotion.find()
+      .sort({ createdAt: sortOrder }) // Assuming there's a 'createdAt' field in your Devotion schema
+      .limit(limit);
 
     res.status(200).json(devotions);
   } catch (error) {
-    console.log(error);
+    console.error("Error fetching devotions:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 };

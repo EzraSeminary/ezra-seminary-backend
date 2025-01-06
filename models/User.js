@@ -41,12 +41,16 @@ userSchema.statics.signup = async function (
   role = "Learner",
   avatar = "default-avatar.jpg"
 ) {
-  if (
-    !firstName ||
-    !lastName ||
-    !email ||
-    (password && !validator.isStrongPassword(password))
-  ) {
+  console.log("Signup data:", {
+    firstName,
+    lastName,
+    email,
+    password,
+    role,
+    avatar,
+  });
+
+  if (!firstName || !lastName || !email || !password) {
     throw Error("Invalid input");
   }
 
@@ -69,10 +73,8 @@ userSchema.statics.signup = async function (
     avatar,
   });
 
-  if (password) {
-    const salt = await bcrypt.genSalt(10);
-    user.password = await bcrypt.hash(password, salt);
-  }
+  const salt = await bcrypt.genSalt(10);
+  user.password = await bcrypt.hash(password, salt);
 
   await user.save();
   return user;
