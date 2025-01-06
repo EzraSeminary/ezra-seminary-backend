@@ -186,7 +186,7 @@ const updateUserProfile = async (req, res) => {
       user.role = req.body.role || user.role;
 
       if (req.body.password) {
-        user.password = req.body.password;
+        user.password = req.body.password; // Set raw password
       }
       if (req.body.progress) {
         user.progress = req.body.progress;
