@@ -140,6 +140,11 @@ const signupUser = async (req, res) => {
       avatar
     );
 
+    if (!user.status) {
+      user.status = "active";
+      await user.save();
+    }
+
     // create token
     const token = createToken(user._id);
 
