@@ -114,6 +114,7 @@ const loginUser = async (req, res) => {
       avatar: user.avatar,
       progress: user.progress,
       achievement: user.achievement,
+      status: user.status,
     });
   } catch (error) {
     res.status(400).json({ error: error.message });
