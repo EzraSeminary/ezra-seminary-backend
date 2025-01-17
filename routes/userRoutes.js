@@ -13,7 +13,7 @@ const {
   deleteUser,
   forgotPassword,
   resetPassword,
-  deactivateUser,
+  updateUserStatus,
 } = require("../controllers/usersController");
 const contactController = require("../controllers/contactController");
 const requireAuth = require("../middleware/requireAuth");
@@ -36,7 +36,7 @@ router.delete("/:id", deleteUser);
 router.post("/contact", contactController.sendContactMessage);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password/:token", resetPassword);
-router.put("/deactivate/:id", deactivateUser);
+router.put("/status/:id", updateUserStatus);
 
 router.get(
   "/auth/google",

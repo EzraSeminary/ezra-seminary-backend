@@ -163,8 +163,13 @@ const signupUser = async (req, res) => {
   }
 };
 
-const deactivateUser = async (req, res) => {
+const updateUserStatus = async (req, res) => {
   const { id } = req.params;
+  const { status } = req.body;
+
+  if (!["active", "inactive"].includes(status)) {
+    return res.status(400).json({ message: "Invalid status value" });
+  }
 
   try {
     const user = await User.findById(id);
@@ -172,10 +177,10 @@ const deactivateUser = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    user.status = "inactive";
+    user.status = status;
     await user.save();
 
-    res.json({ message: "User deactivated successfully", status: user.status });
+    res.json({ message: `User ${status} successfully`, status: user.status });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -436,5 +441,5 @@ module.exports = {
   deleteUser,
   forgotPassword,
   resetPassword,
-  deactivateUser,
+  updateUserStatus,
 };
