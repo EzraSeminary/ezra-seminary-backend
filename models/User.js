@@ -29,6 +29,7 @@ const userSchema = new Schema({
   resetPasswordToken: { type: String },
   resetPasswordExpires: { type: Date },
   googleId: { type: String, unique: true, sparse: true },
+  status: { type: String, enum: ["active", "inactive"], default: "active" },
 });
 
 userSchema.index({ email: 1 }, { unique: true }); // Create index for email field with unique set

@@ -149,9 +149,28 @@ const signupUser = async (req, res) => {
       email,
       token,
       role: user.role,
-      avatar: user.avatar, // Include the avatar in the response
+      avatar: user.avatar,
+      status: user.status,
     });
     console.log(user.avatar);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+const deactivateUser = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    user.status = "inactive";
+    await user.save();
+
+    res.json({ message: "User deactivated successfully", status: user.status });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -412,4 +431,5 @@ module.exports = {
   deleteUser,
   forgotPassword,
   resetPassword,
+  deactivateUser,
 };
