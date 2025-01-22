@@ -180,7 +180,7 @@ const updateUserStatus = async (req, res) => {
 
     user.status = status;
     await user.save();
-
+    console.log(user.status);
     res.json({ message: `User ${status} successfully`, status: user.status });
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -351,9 +351,9 @@ const deleteUser = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    user.deletedAt = new Date();
-    await user.save();
-    res.json({ message: "User marked as deleted successfully" });
+    await User.findByIdAndDelete(id);
+    console.log("User deleted");
+    res.json({ message: "User deleted successfully" });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
