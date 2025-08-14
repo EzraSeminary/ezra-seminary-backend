@@ -8,6 +8,13 @@ const analyticsSchema = new mongoose.Schema(
     totalCourses: { type: Number, default: 0 },
     accountsReached: { type: Number, default: 0 },
     usersLeft: { type: Number, default: 0 },
+    dailyActiveUsers: { type: Number, default: 0 },
+    weeklyActiveUsers: { type: Number, default: 0 },
+    averageSessionTime: { type: Number, default: 0 }, // in minutes
+    courseCompletionRate: { type: Number, default: 0 }, // percentage
+    userEngagementRate: { type: Number, default: 0 }, // percentage
+    totalDevotions: { type: Number, default: 0 },
+    newDevotions: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
