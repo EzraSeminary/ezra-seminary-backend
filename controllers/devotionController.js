@@ -2,10 +2,11 @@
 
 const Devotion = require("../models/Devotion");
 const { uploadImage } = require("../middleware/cloudinary"); // Make sure to require your new uploadImage function
+const { getCurrentEthiopianYear } = require("../utils/devotionUtils");
 
 const createDevotion = async (req, res) => {
   try {
-    const { month, day, title, chapter, verse, prayer } = req.body;
+    const { month, day, year, title, chapter, verse, prayer } = req.body;
 
     // Extract all paragraph fields from the request body
     const paragraphs = Object.keys(req.body)
@@ -23,6 +24,7 @@ const createDevotion = async (req, res) => {
     const devotion = new Devotion({
       month,
       day,
+      year: year || getCurrentEthiopianYear(), // Use provided year or current Ethiopian year
       title,
       chapter,
       verse,
@@ -43,7 +45,7 @@ const createDevotion = async (req, res) => {
 const getDevotions = async (req, res) => {
   try {
     // Destructure and set default values for query parameters
-    let { limit = 0, sort = "desc" } = req.query;
+    let { limit = 0, sort = "desc", year } = req.query;
 
     // Validate 'limit' parameter to ensure it's a non-negative integer
     limit = parseInt(limit, 10);
@@ -54,8 +56,15 @@ const getDevotions = async (req, res) => {
     // Validate 'sort' parameter
     const sortOrder = sort.toLowerCase() === "asc" ? 1 : -1;
 
+    // Build query filter
+    const query = {};
+    if (year) {
+      query.year = parseInt(year, 10);
+    }
+    // Note: If no year is specified, we fetch all devotions to maintain backward compatibility
+
     // Fetch devotions from the database with applied sorting and limit
-    const devotions = await Devotion.find()
+    const devotions = await Devotion.find(query)
       .sort({ createdAt: sortOrder }) // Assuming there's a 'createdAt' field in your Devotion schema
       .limit(limit);
 
@@ -83,7 +92,7 @@ const deleteDevotion = async (req, res) => {
 const updateDevotion = async (req, res) => {
   try {
     const { id } = req.params;
-    const { month, day, title, chapter, verse, prayer } = req.body;
+    const { month, day, year, title, chapter, verse, prayer } = req.body;
 
     // Extract all paragraph fields from the request body
     const paragraphs = Object.keys(req.body)
@@ -93,6 +102,7 @@ const updateDevotion = async (req, res) => {
     const updateData = {
       month,
       day,
+      year,
       title,
       chapter,
       verse,
@@ -120,9 +130,110 @@ const updateDevotion = async (req, res) => {
   }
 };
 
+// Get available years for devotions
+const getAvailableYears = async (req, res) => {
+  try {
+    const years = await Devotion.distinct("year");
+    res.status(200).json(years.sort((a, b) => b - a)); // Sort in descending order (newest first)
+  } catch (error) {
+    console.error("Error fetching available years:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+// Get devotions for a specific year
+const getDevotionsByYear = async (req, res) => {
+  try {
+    const { year } = req.params;
+    const { limit = 0, sort = "desc" } = req.query;
+
+    // Validate year parameter
+    const yearNum = parseInt(year, 10);
+    if (isNaN(yearNum)) {
+      return res.status(400).json({ error: "Invalid year parameter" });
+    }
+
+    // Validate 'limit' parameter
+    const limitNum = parseInt(limit, 10);
+    if (isNaN(limitNum) || limitNum < 0) {
+      return res.status(400).json({ error: "Invalid 'limit' parameter" });
+    }
+
+    // Validate 'sort' parameter
+    const sortOrder = sort.toLowerCase() === "asc" ? 1 : -1;
+
+    const devotions = await Devotion.find({ year: yearNum })
+      .sort({ createdAt: sortOrder })
+      .limit(limitNum);
+
+    res.status(200).json(devotions);
+  } catch (error) {
+    console.error("Error fetching devotions by year:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+// Create devotions for a new year (copy from existing year)
+const createDevotionsForNewYear = async (req, res) => {
+  try {
+    const { sourceYear, targetYear } = req.body;
+
+    if (!sourceYear || !targetYear) {
+      return res
+        .status(400)
+        .json({ error: "Source year and target year are required" });
+    }
+
+    // Check if devotions already exist for target year
+    const existingDevotions = await Devotion.countDocuments({
+      year: targetYear,
+    });
+    if (existingDevotions > 0) {
+      return res.status(400).json({
+        error: `Devotions already exist for year ${targetYear}. Found ${existingDevotions} devotions.`,
+      });
+    }
+
+    // Get devotions from source year
+    const sourceDevotions = await Devotion.find({ year: sourceYear });
+    if (sourceDevotions.length === 0) {
+      return res.status(404).json({
+        error: `No devotions found for source year ${sourceYear}`,
+      });
+    }
+
+    // Create new devotions for target year
+    const newDevotions = sourceDevotions.map((devotion) => ({
+      month: devotion.month,
+      day: devotion.day,
+      year: targetYear,
+      title: devotion.title,
+      chapter: devotion.chapter,
+      verse: devotion.verse,
+      body: devotion.body,
+      prayer: devotion.prayer,
+      image: devotion.image,
+    }));
+
+    const createdDevotions = await Devotion.insertMany(newDevotions);
+
+    res.status(201).json({
+      message: `Successfully created ${createdDevotions.length} devotions for year ${targetYear}`,
+      count: createdDevotions.length,
+      devotions: createdDevotions,
+    });
+  } catch (error) {
+    console.error("Error creating devotions for new year:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
 module.exports = {
   createDevotion,
   getDevotions,
   deleteDevotion,
   updateDevotion,
+  getAvailableYears,
+  getDevotionsByYear,
+  createDevotionsForNewYear,
 };

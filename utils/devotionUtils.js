@@ -71,6 +71,12 @@ const sortMonthsChronologically = (devotionsByMonth) => {
   return sortedMonths;
 };
 
+const getCurrentEthiopianYear = () => {
+  const today = new Date();
+  const [year] = convertToEthiopianDate(today);
+  return year;
+};
+
 module.exports = {
   ethiopianMonths,
   convertToEthiopianDate,
@@ -79,4 +85,5 @@ module.exports = {
   sortMonths,
   sortDevotionsByDayDescending,
   sortMonthsChronologically,
+  getCurrentEthiopianYear,
 };

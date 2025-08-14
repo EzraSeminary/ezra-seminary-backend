@@ -21,8 +21,8 @@ const requireAuth = async (req, res, next) => {
     req.user = user;
 
     // Allow access based on the user's role
-    if (user.role === "Admin" || "Instructor") {
-      // Admin has full access
+    if (user.role === "Admin" || user.role === "Instructor") {
+      // Admin and Instructor have full access
       next();
     } else if (user.role === "Learner") {
       // Learner can access their own profile or any other route
