@@ -337,7 +337,15 @@ const getCurrentUser = async (req, res) => {
 
 const getUsers = async (req, res) => {
   try {
-    const users = await User.find({}, { password: 0 }); // Exclude the password field
+    const { includeDeleted } = req.query;
+
+    let query = {};
+    // Only include deleted users if explicitly requested
+    if (includeDeleted !== "true") {
+      query.deletedAt = null;
+    }
+
+    const users = await User.find(query, { password: 0 }); // Exclude the password field
     res.status(200).json(users);
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -351,8 +359,12 @@ const deleteUser = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    await User.findByIdAndDelete(id);
-    console.log("User deleted");
+
+    // Implement soft delete instead of hard delete
+    user.deletedAt = new Date();
+    await user.save();
+
+    console.log("User soft deleted");
     res.json({ message: "User deleted successfully" });
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -429,11 +441,23 @@ const resetPassword = async (req, res) => {
   }
 };
 
+const getDeletedUsersCount = async (req, res) => {
+  try {
+    const deletedUsersCount = await User.countDocuments({
+      deletedAt: { $ne: null },
+    });
+
+    res.status(200).json({ deletedUsersCount });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
 module.exports = {
   googleLogin,
+  verifyGoogleToken,
   loginUser,
   signupUser,
-  verifyGoogleToken,
   updateUserProfile,
   getUserById,
   updateUserProgress,
@@ -443,4 +467,5 @@ module.exports = {
   forgotPassword,
   resetPassword,
   updateUserStatus,
+  getDeletedUsersCount,
 };

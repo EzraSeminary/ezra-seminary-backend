@@ -27,8 +27,45 @@ const getAnalytics = async () => {
       });
     }
 
+    // Count only active users (not deleted)
+    const activeUsersCount = await User.countDocuments({
+      deletedAt: null,
+    });
+
+    // Count new users in the last 30 days (only active users)
     const newUsersCount = await User.countDocuments({
       createdAt: { $gt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+      deletedAt: null,
+    });
+
+    // Count users who left (inactive for 60+ days or deleted)
+    const usersLeftCount = await User.countDocuments({
+      $or: [
+        // Users who haven't logged in for 60+ days (and are not deleted)
+        {
+          lastLogin: { $lt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000) },
+          deletedAt: null,
+        },
+        // Users who have been soft-deleted
+        { deletedAt: { $ne: null } },
+      ],
+    });
+
+    // Count accounts reached (active users who logged in this month)
+    const accountsReachedCount = await User.countDocuments({
+      lastLogin: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+      deletedAt: null,
+    });
+
+    // Count daily active users (active users who logged in today)
+    const dailyActiveUsersCount = await User.countDocuments({
+      lastLogin: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+      deletedAt: null,
+    });
+
+    // Count weekly active users (active users who logged in this week)
+    const weeklyActiveUsersCount = await User.countDocuments({
+      lastLogin: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
       deletedAt: null,
     });
 
@@ -37,28 +74,14 @@ const getAnalytics = async () => {
     analyticsData.newCourses = await Course.countDocuments({
       createdAt: { $gt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
     });
-    analyticsData.totalUsers = await User.countDocuments();
+    analyticsData.totalUsers = activeUsersCount; // Only count active users
     analyticsData.totalCourses = await Course.countDocuments();
-    analyticsData.accountsReached = await User.countDocuments({
-      lastLogin: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
-    });
-    analyticsData.usersLeft = await User.countDocuments({
-      $or: [
-        { lastLogin: { $lt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000) } },
-        { deletedAt: { $ne: null } },
-      ],
-    });
+    analyticsData.accountsReached = accountsReachedCount;
+    analyticsData.usersLeft = usersLeftCount;
+    analyticsData.dailyActiveUsers = dailyActiveUsersCount;
+    analyticsData.weeklyActiveUsers = weeklyActiveUsersCount;
 
-    // Calculate additional metrics
-    analyticsData.dailyActiveUsers = await User.countDocuments({
-      lastLogin: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
-    });
-
-    analyticsData.weeklyActiveUsers = await User.countDocuments({
-      lastLogin: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
-    });
-
-    // Calculate engagement rate (users who logged in this month / total users)
+    // Calculate engagement rate (users who logged in this month / total active users)
     analyticsData.userEngagementRate =
       analyticsData.totalUsers > 0
         ? (analyticsData.accountsReached / analyticsData.totalUsers) * 100
@@ -70,9 +93,10 @@ const getAnalytics = async () => {
       createdAt: { $gt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
     });
 
-    // Estimate course completion rate (placeholder calculation)
+    // Estimate course completion rate (only for active users)
     const usersWithProgress = await User.countDocuments({
       progress: { $exists: true, $ne: [] },
+      deletedAt: null,
     });
     analyticsData.courseCompletionRate =
       analyticsData.totalUsers > 0
