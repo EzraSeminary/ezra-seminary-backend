@@ -23,7 +23,9 @@ const storage = new CloudinaryStorage({
     resource_type: "auto",
     public_id: (req, file) => {
       const originalName = path.parse(file.originalname).name;
-      return originalName; // Return the original filename without extension
+      const timestamp = Date.now();
+      const randomId = Math.random().toString(36).substring(2, 15);
+      return `${originalName}_${timestamp}_${randomId}`; // Return unique filename with timestamp and random ID
     },
   },
 });
@@ -195,6 +197,12 @@ courseController.put("/update/:id", upload.any(), async (req, res) => {
     const { title, description, category, published } = req.body;
     const files = req.files || [];
 
+    console.log(`[UPDATE] Updating course ${courseId}`);
+    console.log(
+      `[UPDATE] Files received:`,
+      files.map((f) => ({ fieldname: f.fieldname, filename: f.filename }))
+    );
+
     const course = await Course.findById(courseId);
     if (!course) {
       return res.status(404).json({ message: "Course not found" });
@@ -229,6 +237,9 @@ courseController.put("/update/:id", upload.any(), async (req, res) => {
                   }`;
                   const file = files.find((f) => f.fieldname === fieldName);
                   if (file) {
+                    console.log(
+                      `[UPDATE] Found file for ${fieldName}, updating element`
+                    );
                     return {
                       ...element,
                       value:
@@ -256,15 +267,26 @@ courseController.put("/update/:id", upload.any(), async (req, res) => {
     course.chapters =
       updatedChapters.length > 0 ? updatedChapters : course.chapters;
 
+    // CRITICAL FIX: Only update image if a new file was actually uploaded
+    // Check if the image field contains a File object (new upload) not just a URL string
     const imageFile = files.find((file) => file.fieldname === "image");
     if (imageFile) {
+      console.log(
+        `[UPDATE] New image file detected for course ${courseId}, updating from ${course.image} to ${imageFile.path}`
+      );
       course.image = imageFile.path;
+    } else {
+      console.log(
+        `[UPDATE] No new image file for course ${courseId}, keeping existing image: ${course.image}`
+      );
+      // Keep the existing image - don't change it
     }
 
     await course.save();
+    console.log(`[UPDATE] Successfully updated course ${courseId}`);
     res.status(200).json({ message: "Course updated successfully", course });
   } catch (error) {
-    console.error(error);
+    console.error(`[UPDATE ERROR] Error updating course:`, error);
     res.status(500).json({ message: "Server error" });
   }
 });
