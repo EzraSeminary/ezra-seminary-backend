@@ -33,7 +33,16 @@ app.use(passport.session());
 
 app.use(express.json({ limit: "50mb" }));
 
-connectDb();
+// Wait for DB before listening
+connectDb()
+  .then(() => {
+    app.listen(process.env.PORT, () => {
+      console.log(`Server is listening on port ${process.env.PORT}`);
+    });
+  })
+  .catch(() => {
+    // connectDb logs and exits
+  });
 
 app.use(cors(corsOptions));
 app.use(express.json());
@@ -73,10 +82,6 @@ app.all("*", (req, res) => {
   }
 });
 
-// listen for requests
-app.listen(process.env.PORT, () => {
-  console.log("connected to the database");
-  console.log(`Server is listening on port ${process.env.PORT}`);
-});
+// listen handled after DB connection above
 
 module.exports = app;

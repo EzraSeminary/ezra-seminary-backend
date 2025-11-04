@@ -17,6 +17,7 @@ const {
   getDeletedUsersCount,
 } = require("../controllers/usersController");
 const contactController = require("../controllers/contactController");
+const requireAdmin = require("../middleware/requireAdmin");
 const requireAuth = require("../middleware/requireAuth");
 const upload = require("../middleware/upload");
 const passport = require("../config/passport");
@@ -36,6 +37,7 @@ router.get("/deleted-count", getDeletedUsersCount); // Add this line for analyti
 router.delete("/:id", deleteUser);
 
 router.post("/contact", contactController.sendContactMessage);
+router.get("/contacts", requireAuth, requireAdmin, contactController.getContactMessages);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password/:token", resetPassword);
 router.put("/status/:id", updateUserStatus);
