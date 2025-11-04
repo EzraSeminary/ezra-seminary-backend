@@ -34,6 +34,10 @@ const contactSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  repliedAt: {
+    type: Date,
+    default: null,
+  },
 });
 
 const Contact = mongoose.model("Contact", contactSchema);

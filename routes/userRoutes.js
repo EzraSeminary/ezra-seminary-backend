@@ -38,6 +38,7 @@ router.delete("/:id", deleteUser);
 
 router.post("/contact", contactController.sendContactMessage);
 router.get("/contacts", requireAuth, requireAdmin, contactController.getContactMessages);
+router.post("/contacts/:id/reply", requireAuth, requireAdmin, contactController.sendContactReply);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password/:token", resetPassword);
 router.put("/status/:id", updateUserStatus);
