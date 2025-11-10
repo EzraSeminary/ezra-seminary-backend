@@ -52,6 +52,14 @@ const getDevotions = async (req, res) => {
     if (isNaN(limit) || limit < 0) {
       return res.status(400).json({ error: "Invalid 'limit' parameter" });
     }
+    // Apply sensible defaults and caps to avoid timeouts on hosted envs
+    if (limit === 0) {
+      limit = 100;
+    }
+    const MAX_LIMIT = 1000;
+    if (limit > MAX_LIMIT) {
+      limit = MAX_LIMIT;
+    }
 
     // Validate 'sort' parameter
     const sortOrder = sort.toLowerCase() === "asc" ? 1 : -1;
@@ -65,8 +73,9 @@ const getDevotions = async (req, res) => {
 
     // Fetch devotions from the database with applied sorting and limit
     const devotions = await Devotion.find(query)
-      .sort({ createdAt: sortOrder }) // Assuming there's a 'createdAt' field in your Devotion schema
-      .limit(limit);
+      .sort({ createdAt: sortOrder })
+      .limit(limit)
+      .lean();
 
     res.status(200).json(devotions);
   } catch (error) {
