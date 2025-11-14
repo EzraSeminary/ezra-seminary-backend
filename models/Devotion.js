@@ -28,5 +28,8 @@ const devotionSchema = new mongoose.Schema(
 );
 
 const Devotion = mongoose.model("Devotion", devotionSchema);
+// after schema definition
+devotionSchema.index({ year: 1, createdAt: -1 });
+devotionSchema.index({ createdAt: -1 });
 
 module.exports = Devotion;

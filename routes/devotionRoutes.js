@@ -25,6 +25,11 @@ const {
 
 router.route("/create").post(upload.single("image"), createDevotion);
 
+// Old app expects this:
+router.get("/show", getDevotions);
+
+// Also serve base for compatibility
+router.get("/", getDevotions);
 router.route("/show").get(getDevotions);
 
 // Year-specific routes

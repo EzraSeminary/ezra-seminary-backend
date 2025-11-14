@@ -54,9 +54,9 @@ const getDevotions = async (req, res) => {
     }
     // Apply sensible defaults and caps to avoid timeouts on hosted envs
     if (limit === 0) {
-      limit = 100;
+      limit = 1000;
     }
-    const MAX_LIMIT = 1000;
+    const MAX_LIMIT = 2000;
     if (limit > MAX_LIMIT) {
       limit = MAX_LIMIT;
     }
@@ -66,16 +66,89 @@ const getDevotions = async (req, res) => {
 
     // Build query filter
     const query = {};
-    if (year) {
-      query.year = parseInt(year, 10);
+    if (typeof year !== "undefined") {
+      const parsedYear = parseInt(year, 10);
+      // Only apply year filter if a valid number was provided
+      if (!isNaN(parsedYear)) {
+        // Match numeric year, string year (legacy), or docs missing year (legacy)
+        query.$or = [
+          { year: parsedYear },
+          { year: String(parsedYear) },
+          { year: { $exists: false } },
+        ];
+      }
+      // If invalid (e.g., 'all'), ignore and fetch all years for backward compatibility
     }
     // Note: If no year is specified, we fetch all devotions to maintain backward compatibility
 
     // Fetch devotions from the database with applied sorting and limit
-    const devotions = await Devotion.find(query)
+    let devotions = await Devotion.find(query)
       .sort({ createdAt: sortOrder })
       .limit(limit)
       .lean();
+
+    // Debug logging for visibility in server logs
+    console.log("[Devotions] Request query params:", req.query);
+    console.log("[Devotions] Mongo query:", JSON.stringify(query));
+    console.log(
+      "[Devotions] Result count (initial):",
+      Array.isArray(devotions) ? devotions.length : 0
+    );
+    if (Array.isArray(devotions) && devotions.length > 0) {
+      console.log("[Devotions] First devotion (initial):", {
+        _id: devotions[0]._id,
+        title: devotions[0].title,
+        month: devotions[0].month,
+        day: devotions[0].day,
+        year: devotions[0].year,
+      });
+    }
+
+    // If you store filenames and serve from /images, normalize to absolute URLs:
+    if (Array.isArray(devotions)) {
+      const origin = `${req.protocol}://${req.get("host")}`;
+      devotions = devotions.map((d) => {
+        if (
+          d &&
+          d.image &&
+          typeof d.image === "string" &&
+          !d.image.startsWith("http")
+        ) {
+          return { ...d, image: `${origin}/images/${d.image}` };
+        }
+        return d;
+      });
+    }
+
+    // If a specific year was requested but nothing was found, fall back to latest available year
+    if (devotions.length === 0 && typeof year !== "undefined") {
+      const availableYears = await Devotion.distinct("year");
+      if (availableYears && availableYears.length > 0) {
+        // Sort years descending and pick the most recent
+        const latestYear = availableYears.sort((a, b) => b - a)[0];
+        console.log(
+          "[Devotions] Fallback: no results for requested year. Using latest available year:",
+          latestYear
+        );
+        devotions = await Devotion.find({ year: latestYear })
+          .sort({ createdAt: sortOrder })
+          .limit(limit)
+          .lean();
+        console.log(
+          "[Devotions] Result count (fallback):",
+          Array.isArray(devotions) ? devotions.length : 0
+        );
+        if (Array.isArray(devotions) && devotions.length > 0) {
+          console.log("[Devotions] First devotion (fallback):", {
+            _id: devotions[0]._id,
+            title: devotions[0].title,
+            month: devotions[0].month,
+            day: devotions[0].day,
+            year: devotions[0].year,
+          });
+        }
+      }
+    }
 
     res.status(200).json(devotions);
   } catch (error) {

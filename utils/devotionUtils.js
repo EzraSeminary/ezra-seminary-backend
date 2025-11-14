@@ -32,7 +32,7 @@ const findDevotion = (devotions, offset, today) => {
   date.setDate(today.getDate() - offset);
   const [, m, d] = convertToEthiopianDate(date);
   const monthName = ethiopianMonths[m];
-  console.log(`Checking for devotion on: ${monthName} ${d}`);
+  // console.log(`Checking for devotion on: ${monthName} ${d}`);
   return devotions.find(
     (devotion) => devotion.month === monthName && Number(devotion.day) === d
   );
