@@ -192,12 +192,21 @@ const deletePlan = async (req, res) => {
 // User: start a plan
 const startPlan = async (req, res) => {
   try {
+    console.log("[startPlan] Headers:", req.headers.authorization);
+    console.log("[startPlan] req.user:", req.user);
     const userId = req.user?._id || req.user?.id;
+    console.log("[startPlan] userId:", userId);
     const { id } = req.params; // planId
-    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+    if (!userId) {
+      console.log("[startPlan] No userId - returning 401");
+      return res.status(401).json({ error: "Unauthorized" });
+    }
 
     const existing = await UserDevotionPlan.findOne({ userId, planId: id });
-    if (existing) return res.status(200).json(existing);
+    if (existing) {
+      console.log("[startPlan] Existing plan found:", existing._id);
+      return res.status(200).json(existing);
+    }
 
     const created = await UserDevotionPlan.create({
       userId,
@@ -206,6 +215,7 @@ const startPlan = async (req, res) => {
       status: "in_progress",
       startedAt: new Date(),
     });
+    console.log("[startPlan] Plan created:", created._id);
     res.status(201).json(created);
   } catch (error) {
     console.error("Error starting plan:", error);
