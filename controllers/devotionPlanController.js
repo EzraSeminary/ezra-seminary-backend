@@ -403,22 +403,39 @@ module.exports = {
   },
   createPlanDevotion: async (req, res) => {
     try {
+      console.log("[createPlanDevotion] Starting...");
       const { id } = req.params; // planId
+      console.log("[createPlanDevotion] Plan ID:", id);
+      console.log("[createPlanDevotion] Body keys:", Object.keys(req.body));
+      
       const { title, chapter, verse, prayer } = req.body;
       const paragraphs = Object.keys(req.body)
         .filter((key) => key.startsWith("paragraph"))
         .map((key) => req.body[key]);
+      
+      console.log("[createPlanDevotion] Paragraphs count:", paragraphs.length);
+      
       let image = null;
       if (req.file) {
-        const uploadResult = await uploadImage(req.file);
-        image = uploadResult;
+        console.log("[createPlanDevotion] File detected, uploading...");
+        try {
+          const uploadResult = await uploadImage(req.file);
+          image = uploadResult;
+          console.log("[createPlanDevotion] Image uploaded:", image);
+        } catch (uploadError) {
+          console.error("[createPlanDevotion] Image upload error:", uploadError);
+          // Continue without image
+        }
       }
+      
       // Get next order number
+      console.log("[createPlanDevotion] Getting next order number...");
       const maxOrder = await Devotion.findOne({ planId: id })
         .sort({ order: -1 })
         .select("order")
         .lean();
       const order = maxOrder ? maxOrder.order + 1 : 0;
+      console.log("[createPlanDevotion] Next order:", order);
       
       const devotion = await Devotion.create({
         planId: id,
@@ -430,10 +447,12 @@ module.exports = {
         image,
         order,
       });
+      console.log("[createPlanDevotion] Devotion created:", devotion._id);
       res.status(201).json(devotion);
     } catch (error) {
-      console.error("Error creating plan devotion:", error);
-      res.status(500).json({ error: "Internal Server Error" });
+      console.error("[createPlanDevotion] Error:", error);
+      console.error("[createPlanDevotion] Error stack:", error.stack);
+      res.status(500).json({ error: "Internal Server Error", message: error.message });
     }
   },
   updatePlanDevotion: async (req, res) => {
