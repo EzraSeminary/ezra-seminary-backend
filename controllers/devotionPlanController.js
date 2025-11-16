@@ -1,0 +1,405 @@
+const DevotionPlan = require("../models/DevotionPlan");
+const UserDevotionPlan = require("../models/UserDevotionPlan");
+const Devotion = require("../models/Devotion");
+const upload = require("../middleware/upload");
+const { uploadImage } = require("../middleware/cloudinary");
+
+// Admin: create a devotion plan
+const createPlan = async (req, res) => {
+  try {
+    const { title, description } = req.body;
+    let { items } = req.body;
+    // items may come as JSON string or array of ids
+    if (typeof items === "string") {
+      try {
+        items = JSON.parse(items);
+      } catch {
+        items = [];
+      }
+    }
+    if (!Array.isArray(items)) items = [];
+
+    let image = "";
+    if (req.file) {
+      const uploadResult = await uploadImage(req.file);
+      image = uploadResult;
+    }
+
+    const plan = await DevotionPlan.create({
+      title,
+      description,
+      image,
+      items,
+    });
+
+    res.status(201).json(plan);
+  } catch (error) {
+    console.error("Error creating plan:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+// Admin/User: list plans
+const listPlans = async (req, res) => {
+  try {
+    const { limit = 20, page = 1 } = req.query;
+    const limitNum = Math.min(parseInt(limit, 10) || 20, 100);
+    const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+
+    const [plans, total] = await Promise.all([
+      DevotionPlan.find({})
+        .sort({ createdAt: -1 })
+        .skip((pageNum - 1) * limitNum)
+        .limit(limitNum)
+        .lean(),
+      DevotionPlan.countDocuments({}),
+    ]);
+
+    // Normalize image URL if needed
+    const origin = `${req.protocol}://${req.get("host")}`;
+    const normalized = plans.map((p) => {
+      let image = p.image;
+      if (image && typeof image === "string" && !image.startsWith("http")) {
+        image = `${origin}/images/${image}`;
+      }
+      return { ...p, numItems: (p.items || []).length, image };
+    });
+
+    res.status(200).json({
+      items: normalized,
+      total,
+      page: pageNum,
+      limit: limitNum,
+    });
+  } catch (error) {
+    console.error("Error listing plans:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+// Admin/User: get plan by id (with items populated)
+const getPlanById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const plan = await DevotionPlan.findById(id)
+      .populate("items", "title month day year chapter verse image")
+      .lean();
+    if (!plan) return res.status(404).json({ error: "Plan not found" });
+
+    const origin = `${req.protocol}://${req.get("host")}`;
+    let image = plan.image;
+    if (image && typeof image === "string" && !image.startsWith("http")) {
+      image = `${origin}/images/${image}`;
+    }
+
+    res.status(200).json({
+      ...plan,
+      image,
+      numItems: (plan.items || []).length,
+    });
+  } catch (error) {
+    console.error("Error fetching plan:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+// Admin: update plan
+const updatePlan = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, published } = req.body;
+    let { items } = req.body;
+
+    if (typeof items === "string") {
+      try {
+        items = JSON.parse(items);
+      } catch {
+        items = undefined;
+      }
+    }
+
+    const update = {};
+    if (typeof title !== "undefined") update.title = title;
+    if (typeof description !== "undefined") update.description = description;
+    if (typeof published !== "undefined") update.published = published;
+    if (Array.isArray(items)) update.items = items;
+
+    if (req.file) {
+      const uploadResult = await uploadImage(req.file);
+      update.image = uploadResult;
+    }
+
+    const plan = await DevotionPlan.findByIdAndUpdate(id, update, {
+      new: true,
+    });
+    if (!plan) return res.status(404).json({ error: "Plan not found" });
+    res.status(200).json(plan);
+  } catch (error) {
+    console.error("Error updating plan:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+// Admin: delete plan
+const deletePlan = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const plan = await DevotionPlan.findByIdAndDelete(id);
+    if (!plan) return res.status(404).json({ error: "Plan not found" });
+    // Optionally, also delete user progress docs for this plan
+    await UserDevotionPlan.deleteMany({ planId: id });
+    res.status(200).json({ message: "Plan deleted" });
+  } catch (error) {
+    console.error("Error deleting plan:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+// User: start a plan
+const startPlan = async (req, res) => {
+  try {
+    const userId = req.user?._id || req.user?.id;
+    const { id } = req.params; // planId
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+    const existing = await UserDevotionPlan.findOne({ userId, planId: id });
+    if (existing) return res.status(200).json(existing);
+
+    const created = await UserDevotionPlan.create({
+      userId,
+      planId: id,
+      itemsCompleted: [],
+      status: "in_progress",
+      startedAt: new Date(),
+    });
+    res.status(201).json(created);
+  } catch (error) {
+    console.error("Error starting plan:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+// User: record progress on a plan (counts when user opens an item)
+const recordProgress = async (req, res) => {
+  try {
+    const userId = req.user?._id || req.user?.id;
+    const { id } = req.params; // planId
+    const { devotionId } = req.body;
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+    if (!devotionId) return res.status(400).json({ error: "devotionId required" });
+
+    const plan = await DevotionPlan.findById(id).lean();
+    if (!plan) return res.status(404).json({ error: "Plan not found" });
+
+    let progress = await UserDevotionPlan.findOne({ userId, planId: id });
+    if (!progress) {
+      progress = await UserDevotionPlan.create({
+        userId,
+        planId: id,
+        itemsCompleted: [],
+        status: "in_progress",
+        startedAt: new Date(),
+      });
+    }
+
+    const already = progress.itemsCompleted.some(
+      (d) => String(d) === String(devotionId)
+    );
+    if (!already) {
+      progress.itemsCompleted.push(devotionId);
+    }
+
+    // Determine completion
+    const total = (plan.items || []).length;
+    const completed = progress.itemsCompleted.length;
+    if (total > 0 && completed >= total) {
+      progress.status = "completed";
+      progress.completedAt = new Date();
+    }
+    await progress.save();
+    res.status(200).json(progress);
+  } catch (error) {
+    console.error("Error recording progress:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+// User: list my plans (optionally by status)
+const getMyPlans = async (req, res) => {
+  try {
+    const userId = req.user?._id || req.user?.id;
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+    const { status } = req.query;
+    const query = { userId };
+    if (status) query.status = status;
+
+    const my = await UserDevotionPlan.find(query)
+      .populate("planId")
+      .lean();
+
+    // Normalize and compute derived fields
+    const origin = `${req.protocol}://${req.get("host")}`;
+    const normalized = my.map((p) => {
+      const plan = p.planId || {};
+      let image = plan.image;
+      if (image && typeof image === "string" && !image.startsWith("http")) {
+        image = `${origin}/images/${image}`;
+      }
+      const numItems = Array.isArray(plan.items) ? plan.items.length : 0;
+      const completed = Array.isArray(p.itemsCompleted)
+        ? p.itemsCompleted.length
+        : 0;
+      const percent =
+        numItems > 0 ? Math.round((completed / numItems) * 100) : 0;
+      return {
+        ...p,
+        plan: {
+          _id: plan._id,
+          title: plan.title,
+          description: plan.description,
+          image,
+          numItems,
+        },
+        progress: {
+          completed,
+          percent,
+          status: p.status,
+        },
+      };
+    });
+
+    res.status(200).json(normalized);
+  } catch (error) {
+    console.error("Error fetching my plans:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+module.exports = {
+  createPlan,
+  listPlans,
+  getPlanById,
+  updatePlan,
+  deletePlan,
+  startPlan,
+  recordProgress,
+  getMyPlans,
+  // Plan-specific devotions
+  listPlanDevotions: async (req, res) => {
+    try {
+      const { id } = req.params; // planId
+      const { limit = 50, page = 1, sort = "desc" } = req.query;
+      const limitNum = Math.min(parseInt(limit, 10) || 50, 200);
+      const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+      const sortOrder = String(sort).toLowerCase() === "asc" ? 1 : -1;
+
+      const [items, total] = await Promise.all([
+        Devotion.find({ planId: id })
+          .sort({ createdAt: sortOrder })
+          .skip((pageNum - 1) * limitNum)
+          .limit(limitNum)
+          .lean(),
+        Devotion.countDocuments({ planId: id }),
+      ]);
+
+      const origin = `${req.protocol}://${req.get("host")}`;
+      const normalized = items.map((d) => {
+        let image = d.image;
+        if (image && typeof image === "string" && !image.startsWith("http")) {
+          image = `${origin}/images/${image}`;
+        }
+        return { ...d, image };
+      });
+
+      res.status(200).json({
+        items: normalized,
+        total,
+        page: pageNum,
+        limit: limitNum,
+      });
+    } catch (error) {
+      console.error("Error listing plan devotions:", error);
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  },
+  createPlanDevotion: async (req, res) => {
+    try {
+      const { id } = req.params; // planId
+      const { month, day, year, title, chapter, verse, prayer } = req.body;
+      const paragraphs = Object.keys(req.body)
+        .filter((key) => key.startsWith("paragraph"))
+        .map((key) => req.body[key]);
+      let image = null;
+      if (req.file) {
+        const uploadResult = await uploadImage(req.file);
+        image = uploadResult;
+      }
+      const devotion = await Devotion.create({
+        planId: id,
+        month,
+        day,
+        year,
+        title,
+        chapter,
+        verse,
+        body: paragraphs,
+        prayer,
+        image,
+      });
+      res.status(201).json(devotion);
+    } catch (error) {
+      console.error("Error creating plan devotion:", error);
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  },
+  updatePlanDevotion: async (req, res) => {
+    try {
+      const { id, devotionId } = req.params;
+      const { month, day, year, title, chapter, verse, prayer } = req.body;
+      const paragraphs = Object.keys(req.body)
+        .filter((key) => key.startsWith("paragraph"))
+        .map((key) => req.body[key]);
+      const update = {
+        planId: id,
+        month,
+        day,
+        year,
+        title,
+        chapter,
+        verse,
+        body: paragraphs,
+        prayer,
+      };
+      if (req.file) {
+        const uploadResult = await uploadImage(req.file);
+        update.image = uploadResult;
+      }
+      const updated = await Devotion.findOneAndUpdate(
+        { _id: devotionId, planId: id },
+        update,
+        { new: true }
+      );
+      if (!updated) return res.status(404).json({ error: "Devotion not found" });
+      res.status(200).json(updated);
+    } catch (error) {
+      console.error("Error updating plan devotion:", error);
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  },
+  deletePlanDevotion: async (req, res) => {
+    try {
+      const { id, devotionId } = req.params;
+      const deleted = await Devotion.findOneAndDelete({
+        _id: devotionId,
+        planId: id,
+      });
+      if (!deleted) return res.status(404).json({ error: "Devotion not found" });
+      res.status(200).json({ message: "Devotion deleted" });
+    } catch (error) {
+      console.error("Error deleting plan devotion:", error);
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  },
+};
+
+

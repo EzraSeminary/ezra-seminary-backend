@@ -66,16 +66,29 @@ const getDevotions = async (req, res) => {
 
     // Build query filter
     const query = {};
+    // By default, exclude plan-specific devotions from general listing
+    // unless client explicitly requests to include them via includePlan=true
+    const includePlan = String(req.query.includePlan || "").toLowerCase() === "true";
+    if (!includePlan) {
+      query.$or = [{ planId: { $exists: false } }, { planId: null }];
+    }
     if (typeof year !== "undefined") {
       const parsedYear = parseInt(year, 10);
       // Only apply year filter if a valid number was provided
       if (!isNaN(parsedYear)) {
         // Match numeric year, string year (legacy), or docs missing year (legacy)
-        query.$or = [
+        const yearOr = [
           { year: parsedYear },
           { year: String(parsedYear) },
           { year: { $exists: false } },
         ];
+        if (query.$or) {
+          // combine with existing $or for planId exclusion
+          query.$and = [{ $or: query.$or }, { $or: yearOr }];
+          delete query.$or;
+        } else {
+          query.$or = yearOr;
+        }
       }
       // If invalid (e.g., 'all'), ignore and fetch all years for backward compatibility
     }

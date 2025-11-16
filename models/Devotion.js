@@ -21,15 +21,18 @@ const devotionSchema = new mongoose.Schema(
     body: [String],
     prayer: String,
     image: String,
+    // Optional: when this devotion belongs to a specific devotion plan
+    planId: { type: mongoose.Schema.Types.ObjectId, ref: "DevotionPlan" },
   },
   {
     timestamps: true,
   }
 );
 
-const Devotion = mongoose.model("Devotion", devotionSchema);
 // after schema definition
 devotionSchema.index({ year: 1, createdAt: -1 });
 devotionSchema.index({ createdAt: -1 });
+devotionSchema.index({ planId: 1, createdAt: -1 });
+const Devotion = mongoose.model("Devotion", devotionSchema);
 
 module.exports = Devotion;
