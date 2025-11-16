@@ -7,7 +7,17 @@ const { uploadImage } = require("../middleware/cloudinary");
 // Admin: create a devotion plan
 const createPlan = async (req, res) => {
   try {
+    console.log("[DevotionPlan] Create request received");
+    console.log("[DevotionPlan] Body:", req.body);
+    console.log("[DevotionPlan] File:", req.file ? "present" : "none");
+    
     const { title, description } = req.body;
+    
+    if (!title) {
+      console.log("[DevotionPlan] Missing title");
+      return res.status(400).json({ error: "Title is required" });
+    }
+    
     let { items } = req.body;
     // items may come as JSON string or array of ids
     if (typeof items === "string") {
@@ -21,21 +31,30 @@ const createPlan = async (req, res) => {
 
     let image = "";
     if (req.file) {
+      console.log("[DevotionPlan] Uploading image...");
       const uploadResult = await uploadImage(req.file);
       image = uploadResult;
+      console.log("[DevotionPlan] Image uploaded:", image);
     }
 
+    console.log("[DevotionPlan] Creating plan in DB...");
     const plan = await DevotionPlan.create({
       title,
       description,
       image,
       items,
     });
+    console.log("[DevotionPlan] Plan created:", plan._id);
 
     res.status(201).json(plan);
   } catch (error) {
-    console.error("Error creating plan:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error("[DevotionPlan] Error creating plan:", error);
+    console.error("[DevotionPlan] Error stack:", error.stack);
+    res.status(500).json({ 
+      error: "Internal Server Error",
+      message: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 };
 
