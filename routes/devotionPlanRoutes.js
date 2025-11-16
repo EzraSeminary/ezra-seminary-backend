@@ -103,8 +103,8 @@ router.post("/:id/start", verifyJWT, (req, res) => getController().startPlan(req
 router.post("/:id/progress", verifyJWT, (req, res) => getController().recordProgress(req, res));
 router.get("/me/my", verifyJWT, (req, res) => getController().getMyPlans(req, res));
 
-// Plan-specific devotions (admin)
-router.get("/:id/devotions", verifyJWT, (req, res) => getController().listPlanDevotions(req, res));
+// Plan-specific devotions (public for viewing, admin can create/edit/delete)
+router.get("/:id/devotions", (req, res) => getController().listPlanDevotions(req, res));
 router.post(
   "/:id/devotions",
   verifyJWT,
