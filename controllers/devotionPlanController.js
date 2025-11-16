@@ -8,14 +8,22 @@ const { uploadImage } = require("../middleware/cloudinary");
 const createPlan = async (req, res) => {
   try {
     console.log("[DevotionPlan] Create request received");
+    console.log("[DevotionPlan] Headers:", req.headers);
     console.log("[DevotionPlan] Body:", req.body);
-    console.log("[DevotionPlan] File:", req.file ? "present" : "none");
+    console.log("[DevotionPlan] Body keys:", Object.keys(req.body));
+    console.log("[DevotionPlan] Body values:", Object.values(req.body));
+    console.log("[DevotionPlan] File:", req.file ? req.file : "none");
     
     const { title, description } = req.body;
     
-    if (!title) {
-      console.log("[DevotionPlan] Missing title");
-      return res.status(400).json({ error: "Title is required" });
+    console.log("[DevotionPlan] Extracted - title:", title, "description:", description);
+    
+    if (!title || title.trim() === "") {
+      console.log("[DevotionPlan] Missing or empty title");
+      return res.status(400).json({ 
+        error: "Title is required",
+        received: { title, description, hasFile: !!req.file }
+      });
     }
     
     let { items } = req.body;
@@ -74,14 +82,20 @@ const listPlans = async (req, res) => {
       DevotionPlan.countDocuments({}),
     ]);
 
+    // Count actual devotions for each plan
+    const planIds = plans.map((p) => p._id);
+    const devotionCounts = await Promise.all(
+      planIds.map((planId) => Devotion.countDocuments({ planId }))
+    );
+
     // Normalize image URL if needed
     const origin = `${req.protocol}://${req.get("host")}`;
-    const normalized = plans.map((p) => {
+    const normalized = plans.map((p, index) => {
       let image = p.image;
       if (image && typeof image === "string" && !image.startsWith("http")) {
         image = `${origin}/images/${image}`;
       }
-      return { ...p, numItems: (p.items || []).length, image };
+      return { ...p, numItems: devotionCounts[index], image };
     });
 
     res.status(200).json({
@@ -100,10 +114,11 @@ const listPlans = async (req, res) => {
 const getPlanById = async (req, res) => {
   try {
     const { id } = req.params;
-    const plan = await DevotionPlan.findById(id)
-      .populate("items", "title month day year chapter verse image")
-      .lean();
+    const plan = await DevotionPlan.findById(id).lean();
     if (!plan) return res.status(404).json({ error: "Plan not found" });
+
+    // Count actual devotions for this plan
+    const numItems = await Devotion.countDocuments({ planId: id });
 
     const origin = `${req.protocol}://${req.get("host")}`;
     let image = plan.image;
@@ -114,7 +129,7 @@ const getPlanById = async (req, res) => {
     res.status(200).json({
       ...plan,
       image,
-      numItems: (plan.items || []).length,
+      numItems,
     });
   } catch (error) {
     console.error("Error fetching plan:", error);
@@ -294,6 +309,40 @@ const getMyPlans = async (req, res) => {
   }
 };
 
+// Reorder devotion in plan
+const reorderPlanDevotion = async (req, res) => {
+  try {
+    const { id, devotionId } = req.params;
+    const { direction } = req.body; // "up" or "down"
+    
+    const devotion = await Devotion.findOne({ _id: devotionId, planId: id });
+    if (!devotion) return res.status(404).json({ error: "Devotion not found" });
+    
+    const currentOrder = devotion.order || 0;
+    const newOrder = direction === "up" ? currentOrder - 1 : currentOrder + 1;
+    
+    // Find the devotion to swap with
+    const swapWith = await Devotion.findOne({
+      planId: id,
+      order: newOrder,
+    });
+    
+    if (swapWith) {
+      // Swap orders
+      await Devotion.updateOne({ _id: devotion._id }, { order: newOrder });
+      await Devotion.updateOne({ _id: swapWith._id }, { order: currentOrder });
+    } else {
+      // Just update the current devotion
+      await Devotion.updateOne({ _id: devotion._id }, { order: newOrder });
+    }
+    
+    res.status(200).json({ message: "Reordered successfully" });
+  } catch (error) {
+    console.error("Error reordering devotion:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
 module.exports = {
   createPlan,
   listPlans,
@@ -303,6 +352,7 @@ module.exports = {
   startPlan,
   recordProgress,
   getMyPlans,
+  reorderPlanDevotion,
   // Plan-specific devotions
   listPlanDevotions: async (req, res) => {
     try {
@@ -314,7 +364,7 @@ module.exports = {
 
       const [items, total] = await Promise.all([
         Devotion.find({ planId: id })
-          .sort({ createdAt: sortOrder })
+          .sort({ order: 1, createdAt: sortOrder })
           .skip((pageNum - 1) * limitNum)
           .limit(limitNum)
           .lean(),
@@ -344,7 +394,7 @@ module.exports = {
   createPlanDevotion: async (req, res) => {
     try {
       const { id } = req.params; // planId
-      const { month, day, year, title, chapter, verse, prayer } = req.body;
+      const { title, chapter, verse, prayer } = req.body;
       const paragraphs = Object.keys(req.body)
         .filter((key) => key.startsWith("paragraph"))
         .map((key) => req.body[key]);
@@ -353,17 +403,22 @@ module.exports = {
         const uploadResult = await uploadImage(req.file);
         image = uploadResult;
       }
+      // Get next order number
+      const maxOrder = await Devotion.findOne({ planId: id })
+        .sort({ order: -1 })
+        .select("order")
+        .lean();
+      const order = maxOrder ? maxOrder.order + 1 : 0;
+      
       const devotion = await Devotion.create({
         planId: id,
-        month,
-        day,
-        year,
         title,
         chapter,
         verse,
         body: paragraphs,
         prayer,
         image,
+        order,
       });
       res.status(201).json(devotion);
     } catch (error) {

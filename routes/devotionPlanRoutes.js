@@ -126,6 +126,14 @@ router.delete(
   (req, res) => getController().deletePlanDevotion(req, res)
 );
 
+// Reorder devotion in plan
+router.post(
+  "/:id/devotions/:devotionId/reorder",
+  verifyJWT,
+  requireAdmin,
+  (req, res) => getController().reorderPlanDevotion(req, res)
+);
+
 module.exports = router;
 
 

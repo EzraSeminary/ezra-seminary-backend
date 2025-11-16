@@ -8,11 +8,17 @@ const devotionSchema = new mongoose.Schema(
     day: String,
     year: {
       type: Number,
-      required: true,
+      required: function() {
+        // Only required if not part of a plan
+        return !this.planId;
+      },
       default: function () {
-        // Get current Ethiopian year as default
-        const { getCurrentEthiopianYear } = require("../utils/devotionUtils");
-        return getCurrentEthiopianYear();
+        // Get current Ethiopian year as default for non-plan devotions
+        if (!this.planId) {
+          const { getCurrentEthiopianYear } = require("../utils/devotionUtils");
+          return getCurrentEthiopianYear();
+        }
+        return undefined;
       },
     },
     title: String,
@@ -23,6 +29,10 @@ const devotionSchema = new mongoose.Schema(
     image: String,
     // Optional: when this devotion belongs to a specific devotion plan
     planId: { type: mongoose.Schema.Types.ObjectId, ref: "DevotionPlan" },
+    order: {
+      type: Number,
+      default: 0, // Used for ordering devotions within a plan
+    },
   },
   {
     timestamps: true,
