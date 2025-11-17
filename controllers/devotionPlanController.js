@@ -407,24 +407,84 @@ module.exports = {
       const { id } = req.params; // planId
       console.log("[createPlanDevotion] Plan ID:", id);
       console.log("[createPlanDevotion] Body keys:", Object.keys(req.body));
+      console.log("[createPlanDevotion] Body:", req.body);
+      console.log("[createPlanDevotion] File:", req.file ? "Present" : "None");
+      
+      // Validate plan exists
+      const planExists = await DevotionPlan.findById(id);
+      if (!planExists) {
+        console.log("[createPlanDevotion] Plan not found:", id);
+        return res.status(404).json({ error: "Devotion plan not found" });
+      }
       
       const { title, chapter, verse, prayer } = req.body;
-      const paragraphs = Object.keys(req.body)
-        .filter((key) => key.startsWith("paragraph"))
-        .map((key) => req.body[key]);
       
+      // Validate required fields
+      if (!title || !title.trim()) {
+        return res.status(400).json({ error: "Title is required" });
+      }
+      if (!chapter || !chapter.trim()) {
+        return res.status(400).json({ error: "Chapter is required" });
+      }
+      if (!verse || !verse.trim()) {
+        return res.status(400).json({ error: "Verse is required" });
+      }
+      if (!prayer || !prayer.trim()) {
+        return res.status(400).json({ error: "Prayer is required" });
+      }
+      
+      // Parse paragraphs - handle both paragraph0 and body field
+      let paragraphs = [];
+      const paragraphKeys = Object.keys(req.body)
+        .filter((key) => key.startsWith("paragraph"))
+        .sort((a, b) => {
+          // Sort by number: paragraph0, paragraph1, etc.
+          const numA = parseInt(a.replace('paragraph', '')) || 0;
+          const numB = parseInt(b.replace('paragraph', '')) || 0;
+          return numA - numB;
+        });
+      
+      if (paragraphKeys.length > 0) {
+        paragraphs = paragraphKeys.map((key) => {
+          const value = req.body[key];
+          return value && typeof value === 'string' ? value.trim() : '';
+        });
+        // Keep all paragraphs, even empty ones, but ensure at least one non-empty
+        const hasContent = paragraphs.some(p => p.length > 0);
+        if (!hasContent && paragraphs.length > 0) {
+          // If all are empty but we have keys, keep the first one
+          paragraphs = [paragraphs[0] || ''];
+        }
+      }
+      
+      // If no paragraphs found, check if there's a body field
+      if (paragraphs.length === 0 && req.body.body) {
+        const bodyValue = req.body.body;
+        if (typeof bodyValue === 'string') {
+          paragraphs = [bodyValue.trim()];
+        }
+      }
+      
+      // Ensure we have at least one paragraph (can be empty string)
+      if (paragraphs.length === 0) {
+        paragraphs = [''];
+      }
+      
+      console.log("[createPlanDevotion] Paragraphs:", paragraphs);
       console.log("[createPlanDevotion] Paragraphs count:", paragraphs.length);
       
-      let image = null;
+      let image = "";
       if (req.file) {
         console.log("[createPlanDevotion] File detected, uploading...");
         try {
           const uploadResult = await uploadImage(req.file);
-          image = uploadResult;
+          image = uploadResult || "";
           console.log("[createPlanDevotion] Image uploaded:", image);
         } catch (uploadError) {
           console.error("[createPlanDevotion] Image upload error:", uploadError);
-          // Continue without image
+          console.error("[createPlanDevotion] Upload error stack:", uploadError.stack);
+          // Continue without image - it's optional, use empty string
+          image = "";
         }
       }
       
@@ -434,25 +494,52 @@ module.exports = {
         .sort({ order: -1 })
         .select("order")
         .lean();
-      const order = maxOrder ? maxOrder.order + 1 : 0;
+      const order = maxOrder && maxOrder.order !== undefined ? maxOrder.order + 1 : 0;
       console.log("[createPlanDevotion] Next order:", order);
       
-      const devotion = await Devotion.create({
+      console.log("[createPlanDevotion] Creating devotion with:", {
         planId: id,
         title,
         chapter,
         verse,
         body: paragraphs,
         prayer,
+        image: image || "none",
+        order,
+      });
+      
+      const devotion = await Devotion.create({
+        planId: id,
+        title: title.trim(),
+        chapter: chapter.trim(),
+        verse: verse.trim(),
+        body: paragraphs,
+        prayer: prayer.trim(),
         image,
         order,
       });
-      console.log("[createPlanDevotion] Devotion created:", devotion._id);
+      console.log("[createPlanDevotion] Devotion created successfully:", devotion._id);
       res.status(201).json(devotion);
     } catch (error) {
       console.error("[createPlanDevotion] Error:", error);
+      console.error("[createPlanDevotion] Error name:", error.name);
+      console.error("[createPlanDevotion] Error message:", error.message);
       console.error("[createPlanDevotion] Error stack:", error.stack);
-      res.status(500).json({ error: "Internal Server Error", message: error.message });
+      
+      // Handle validation errors
+      if (error.name === 'ValidationError') {
+        const messages = Object.values(error.errors).map((e) => e.message);
+        return res.status(400).json({ 
+          error: "Validation Error", 
+          details: messages 
+        });
+      }
+      
+      res.status(500).json({ 
+        error: "Internal Server Error", 
+        message: error.message,
+        name: error.name
+      });
     }
   },
   updatePlanDevotion: async (req, res) => {
