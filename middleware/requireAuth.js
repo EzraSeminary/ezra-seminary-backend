@@ -25,13 +25,12 @@ const requireAuth = async (req, res, next) => {
       // Admin and Instructor have full access
       next();
     } else if (user.role === "Learner") {
-      // Learner can access their own profile or other resources
-      // Only check user ID match for user profile routes (contains /users/ in path)
-      if (req.params.id && req.path.includes('/users/') && req.params.id !== user._id.toString()) {
+      // Learner can access their own profile or any other route
+      if (req.params.id && req.params.id !== user._id.toString()) {
         // Learner is trying to update another user's profile
         return res.status(403).json({ error: "Forbidden" });
       } else {
-        // Learner is updating their own profile or accessing other routes
+        // Learner is updating their own profile or accessing any other route
         next();
       }
     } else {
