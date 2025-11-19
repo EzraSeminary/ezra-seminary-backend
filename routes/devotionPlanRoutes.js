@@ -29,15 +29,15 @@ const {
 // Get all devotion plans (public)
 router.get("/", getDevotionPlans);
 
-// Get specific devotion plan
+// User endpoints (requires auth) - MUST come before /:id routes
+// Get user's devotion plans (requires auth)
+router.get("/user", verifyJWT, getUserDevotionPlans);
+
+// Get specific devotion plan (public)
 router.get("/:id", getDevotionPlanById);
 
 // Get plan devotions (public for viewing)
 router.get("/:id/devotions", listPlanDevotions);
-
-// User endpoints (requires auth)
-// Get user's devotion plans (requires auth)
-router.get("/user", verifyJWT, getUserDevotionPlans);
 
 // Get progress for a specific plan
 router.get("/:id/progress", verifyJWT, getDevotionPlanProgress);

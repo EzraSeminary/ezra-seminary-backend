@@ -8,17 +8,32 @@ const { uploadImage } = require("../middleware/cloudinary");
 // Get all devotion plans (public)
 const getDevotionPlans = async (req, res) => {
   try {
+    // Get plans with populated items
     const plans = await DevotionPlan.find({ published: true })
       .populate("items", "title chapter verse image")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Count items from the items array (works whether populated or not)
+    const plansWithCount = plans.map((plan) => {
+      // Count from items array - if populated, it's an array of objects, if not, it's an array of ObjectIds
+      // Both are arrays, so length works for both
+      const itemCount = Array.isArray(plan.items) ? plan.items.length : 0;
+      
+      return {
+        ...plan,
+        numItems: itemCount, // Use the count from items array
+      };
+    });
 
     res.status(200).json({
-      items: plans,
-      total: plans.length,
+      items: plansWithCount,
+      total: plansWithCount.length,
     });
   } catch (error) {
     console.error("Error fetching devotion plans:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error("Error stack:", error.stack);
+    res.status(500).json({ error: "Internal Server Error", message: error.message });
   }
 };
 
@@ -26,57 +41,114 @@ const getDevotionPlans = async (req, res) => {
 const getDevotionPlanById = async (req, res) => {
   try {
     const { id } = req.params;
-    const plan = await DevotionPlan.findById(id).populate("items", "title chapter verse image body prayer order");
+    const plan = await DevotionPlan.findById(id)
+      .populate("items", "title chapter verse image body prayer order")
+      .lean();
 
     if (!plan) {
       return res.status(404).json({ error: "Devotion plan not found" });
     }
 
-    res.status(200).json(plan);
+    // Count items from the items array
+    const itemCount = Array.isArray(plan.items) ? plan.items.length : 0;
+
+    res.status(200).json({
+      ...plan,
+      numItems: itemCount,
+    });
   } catch (error) {
     console.error("Error fetching devotion plan:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error("Error stack:", error.stack);
+    res.status(500).json({ error: "Internal Server Error", message: error.message });
   }
 };
 
 // Get user's devotion plans (requires auth)
 const getUserDevotionPlans = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id;
     const { status } = req.query;
+
+    console.log("[getUserDevotionPlans] User ID:", userId);
+    console.log("[getUserDevotionPlans] Status filter:", status);
 
     const query = { userId };
     if (status) {
       query.status = status;
     }
 
+    // First get user plans without nested populate to avoid errors
     const userPlans = await UserDevotionPlan.find(query)
       .populate("planId")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
+    console.log("[getUserDevotionPlans] Found userPlans:", userPlans.length);
+
+    // Process each user plan separately
     const plansWithProgress = await Promise.all(
       userPlans.map(async (userPlan) => {
-        const plan = await DevotionPlan.findById(userPlan.planId).populate("items");
-        const totalItems = plan?.items?.length || 0;
-        const completedItems = userPlan.itemsCompleted?.length || 0;
-        const percent = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+        try {
+          const planId = userPlan.planId?._id || userPlan.planId;
+          
+          if (!planId) {
+            console.warn(`UserPlan ${userPlan._id} has no planId`);
+            return null;
+          }
 
-        return {
-          ...userPlan.toObject(),
-          plan: plan?.toObject(),
-          progress: {
-            completed: completedItems,
-            total: totalItems,
-            percent,
-          },
-        };
+          // Fetch the plan separately with items populated
+          const plan = await DevotionPlan.findById(planId)
+            .populate("items", "title chapter verse image body prayer order")
+            .lean();
+
+          if (!plan) {
+            console.warn(`Plan ${planId} not found for userPlan ${userPlan._id}`);
+            return null;
+          }
+
+          // Count items from the plan's items array
+          const totalItems = Array.isArray(plan.items) ? plan.items.length : 0;
+          const completedItems = Array.isArray(userPlan.itemsCompleted) ? userPlan.itemsCompleted.length : 0;
+          const percent = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+
+          // Ensure numItems is included
+          plan.numItems = totalItems;
+
+          return {
+            _id: userPlan._id,
+            userId: userPlan.userId,
+            planId: planId,
+            status: userPlan.status,
+            itemsCompleted: userPlan.itemsCompleted || [],
+            startedAt: userPlan.startedAt,
+            completedAt: userPlan.completedAt,
+            createdAt: userPlan.createdAt,
+            updatedAt: userPlan.updatedAt,
+            plan: plan,
+            progress: {
+              completed: completedItems,
+              total: totalItems,
+              percent,
+            },
+          };
+        } catch (err) {
+          console.error(`Error processing userPlan ${userPlan._id}:`, err);
+          console.error(`Error stack:`, err.stack);
+          return null;
+        }
       })
     );
 
-    res.status(200).json(plansWithProgress);
+    // Filter out null values
+    const validPlans = plansWithProgress.filter(plan => plan !== null);
+
+    console.log("[getUserDevotionPlans] Returning valid plans:", validPlans.length);
+
+    res.status(200).json(validPlans);
   } catch (error) {
     console.error("Error fetching user devotion plans:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error("Error stack:", error.stack);
+    res.status(500).json({ error: "Internal Server Error", message: error.message });
   }
 };
 
@@ -84,7 +156,7 @@ const getUserDevotionPlans = async (req, res) => {
 const getDevotionPlanProgress = async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user.id;
+    const userId = req.user._id;
 
     const userPlan = await UserDevotionPlan.findOne({ userId, planId: id });
     if (!userPlan) {
@@ -117,7 +189,7 @@ const getDevotionPlanProgress = async (req, res) => {
 const startDevotionPlan = async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user.id;
+    const userId = req.user._id;
 
     // Check if plan exists
     const plan = await DevotionPlan.findById(id);
@@ -158,7 +230,7 @@ const startDevotionPlan = async (req, res) => {
 const updateDevotionPlanProgress = async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user.id;
+    const userId = req.user._id;
     const { devotionId, completed } = req.body;
 
     const userPlan = await UserDevotionPlan.findOne({ userId, planId: id });
@@ -211,7 +283,7 @@ const updateDevotionPlanProgress = async (req, res) => {
 const completeDevotionPlan = async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user.id;
+    const userId = req.user._id;
 
     const userPlan = await UserDevotionPlan.findOne({ userId, planId: id });
     if (!userPlan) {
@@ -316,18 +388,19 @@ const listPlanDevotions = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const plan = await DevotionPlan.findById(id).populate({
-      path: "items",
-      options: { sort: { order: 1 } },
-    });
-
+    const plan = await DevotionPlan.findById(id);
     if (!plan) {
       return res.status(404).json({ error: "Devotion plan not found" });
     }
 
+    // Get all devotions for this plan and sort by order
+    const devotions = await Devotion.find({ planId: id })
+      .sort({ order: 1 })
+      .exec();
+
     res.status(200).json({
-      items: plan.items || [],
-      total: plan.items?.length || 0,
+      items: devotions || [],
+      total: devotions?.length || 0,
     });
   } catch (error) {
     console.error("Error listing plan devotions:", error);
@@ -340,6 +413,9 @@ const createPlanDevotion = async (req, res) => {
   try {
     const { id } = req.params;
     const { month, day, title, chapter, verse, prayer } = req.body;
+
+    console.log("[createPlanDevotion] Request body:", req.body);
+    console.log("[createPlanDevotion] File:", req.file);
 
     const plan = await DevotionPlan.findById(id);
     if (!plan) {
@@ -361,8 +437,8 @@ const createPlanDevotion = async (req, res) => {
     const maxOrder = existingDevotions.length > 0 ? existingDevotions[0].order : -1;
 
     const devotion = new Devotion({
-      month,
-      day,
+      month: month || "",
+      day: day || "",
       title,
       chapter,
       verse,
@@ -373,16 +449,26 @@ const createPlanDevotion = async (req, res) => {
       order: maxOrder + 1,
     });
 
-    await devotion.save();
+    const savedDevotion = await devotion.save();
+    console.log("[createPlanDevotion] Saved devotion:", savedDevotion._id);
 
-    // Add to plan items
-    plan.items.push(devotion._id);
-    await plan.save();
+    // Use updateOne to ensure the array is properly saved to database
+    await DevotionPlan.updateOne(
+      { _id: id },
+      { $push: { items: savedDevotion._id } }
+    );
 
-    res.status(201).json(devotion);
+    // Reload plan to verify it was saved
+    const updatedPlan = await DevotionPlan.findById(id);
+    console.log("[createPlanDevotion] Plan items count after save:", updatedPlan.items.length);
+
+    // Populate the saved devotion for response
+    const populatedDevotion = await Devotion.findById(savedDevotion._id);
+    res.status(201).json(populatedDevotion);
   } catch (error) {
     console.error("Error creating plan devotion:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error("Error stack:", error.stack);
+    res.status(500).json({ error: "Internal Server Error", message: error.message });
   }
 };
 
