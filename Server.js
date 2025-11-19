@@ -8,7 +8,6 @@ const dotenv = require("dotenv").config();
 const cors = require("cors");
 const corsOptions = require("./config/corsOptions");
 const devotionRoutes = require("./routes/devotionRoutes");
-const devotionPlanRoutes = require("./routes/devotionPlanRoutes");
 const userRoutes = require("./routes/userRoutes");
 const sslLinkRoutes = require("./routes/sslLinkRoutes");
 const path = require("path");
@@ -19,6 +18,7 @@ const analyticsRoutes = require("./routes/analyticsRoutes");
 // const requireAuth = require("./middleware/requireAuth");
 const passport = require("./config/passport");
 const session = require("express-session");
+const devotionPlanRoutes = require("./routes/devotionPlanRoutes");
 
 app.use(
   session({
