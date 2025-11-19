@@ -388,23 +388,33 @@ const listPlanDevotions = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const plan = await DevotionPlan.findById(id);
+    const plan = await DevotionPlan.findById(id).lean();
     if (!plan) {
       return res.status(404).json({ error: "Devotion plan not found" });
     }
 
-    // Get all devotions for this plan and sort by order
-    const devotions = await Devotion.find({ planId: id })
+    // Get all devotions that are in the plan's items array
+    // This ensures we only count devotions that are actually linked to the plan
+    const devotionIds = plan.items || [];
+    
+    // Fetch all devotions by their IDs and maintain order
+    const devotions = await Devotion.find({ _id: { $in: devotionIds } })
       .sort({ order: 1 })
+      .lean()
       .exec();
+
+    // Also count items array length for consistency
+    const itemCount = Array.isArray(plan.items) ? plan.items.length : 0;
 
     res.status(200).json({
       items: devotions || [],
       total: devotions?.length || 0,
+      itemCount: itemCount, // Include the actual items array count for debugging
     });
   } catch (error) {
     console.error("Error listing plan devotions:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error("Error stack:", error.stack);
+    res.status(500).json({ error: "Internal Server Error", message: error.message });
   }
 };
 
