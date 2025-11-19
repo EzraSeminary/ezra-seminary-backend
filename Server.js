@@ -8,6 +8,7 @@ const dotenv = require("dotenv").config();
 const cors = require("cors");
 const corsOptions = require("./config/corsOptions");
 const devotionRoutes = require("./routes/devotionRoutes");
+const devotionPlanRoutes = require("./routes/devotionPlanRoutes");
 const userRoutes = require("./routes/userRoutes");
 const sslLinkRoutes = require("./routes/sslLinkRoutes");
 const path = require("path");
@@ -65,6 +66,7 @@ app.use("/", require("./routes/root"));
 // All routes are authenticated by default
 app.use("/users", userRoutes);
 app.use("/devotion", devotionRoutes);
+app.use("/devotion-plan", devotionPlanRoutes);
 app.use("/course", courseController);
 app.use("/quiz", quizController);
 app.use("/analytics", analyticsRoutes);
