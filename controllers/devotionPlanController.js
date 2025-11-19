@@ -19,7 +19,7 @@ const getDevotionPlans = async (req, res) => {
       // Count from items array - if populated, it's an array of objects, if not, it's an array of ObjectIds
       // Both are arrays, so length works for both
       const itemCount = Array.isArray(plan.items) ? plan.items.length : 0;
-      
+
       return {
         ...plan,
         numItems: itemCount, // Use the count from items array
@@ -33,7 +33,9 @@ const getDevotionPlans = async (req, res) => {
   } catch (error) {
     console.error("Error fetching devotion plans:", error);
     console.error("Error stack:", error.stack);
-    res.status(500).json({ error: "Internal Server Error", message: error.message });
+    res
+      .status(500)
+      .json({ error: "Internal Server Error", message: error.message });
   }
 };
 
@@ -59,7 +61,9 @@ const getDevotionPlanById = async (req, res) => {
   } catch (error) {
     console.error("Error fetching devotion plan:", error);
     console.error("Error stack:", error.stack);
-    res.status(500).json({ error: "Internal Server Error", message: error.message });
+    res
+      .status(500)
+      .json({ error: "Internal Server Error", message: error.message });
   }
 };
 
@@ -90,7 +94,7 @@ const getUserDevotionPlans = async (req, res) => {
       userPlans.map(async (userPlan) => {
         try {
           const planId = userPlan.planId?._id || userPlan.planId;
-          
+
           if (!planId) {
             console.warn(`UserPlan ${userPlan._id} has no planId`);
             return null;
@@ -102,14 +106,21 @@ const getUserDevotionPlans = async (req, res) => {
             .lean();
 
           if (!plan) {
-            console.warn(`Plan ${planId} not found for userPlan ${userPlan._id}`);
+            console.warn(
+              `Plan ${planId} not found for userPlan ${userPlan._id}`
+            );
             return null;
           }
 
           // Count items from the plan's items array
           const totalItems = Array.isArray(plan.items) ? plan.items.length : 0;
-          const completedItems = Array.isArray(userPlan.itemsCompleted) ? userPlan.itemsCompleted.length : 0;
-          const percent = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+          const completedItems = Array.isArray(userPlan.itemsCompleted)
+            ? userPlan.itemsCompleted.length
+            : 0;
+          const percent =
+            totalItems > 0
+              ? Math.round((completedItems / totalItems) * 100)
+              : 0;
 
           // Ensure numItems is included
           plan.numItems = totalItems;
@@ -140,15 +151,20 @@ const getUserDevotionPlans = async (req, res) => {
     );
 
     // Filter out null values
-    const validPlans = plansWithProgress.filter(plan => plan !== null);
+    const validPlans = plansWithProgress.filter((plan) => plan !== null);
 
-    console.log("[getUserDevotionPlans] Returning valid plans:", validPlans.length);
+    console.log(
+      "[getUserDevotionPlans] Returning valid plans:",
+      validPlans.length
+    );
 
     res.status(200).json(validPlans);
   } catch (error) {
     console.error("Error fetching user devotion plans:", error);
     console.error("Error stack:", error.stack);
-    res.status(500).json({ error: "Internal Server Error", message: error.message });
+    res
+      .status(500)
+      .json({ error: "Internal Server Error", message: error.message });
   }
 };
 
@@ -166,7 +182,8 @@ const getDevotionPlanProgress = async (req, res) => {
     const plan = await DevotionPlan.findById(id).populate("items");
     const totalItems = plan?.items?.length || 0;
     const completedItems = userPlan.itemsCompleted?.length || 0;
-    const percent = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+    const percent =
+      totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
 
     res.status(200).json({
       plan: plan?.toObject(),
@@ -175,9 +192,12 @@ const getDevotionPlanProgress = async (req, res) => {
         total: totalItems,
         percent,
       },
-      status: userPlan.status,
-      startedAt: userPlan.startedAt,
-      completedAt: userPlan.completedAt,
+      userPlan: {
+        status: userPlan.status,
+        startedAt: userPlan.startedAt,
+        completedAt: userPlan.completedAt,
+        itemsCompleted: userPlan.itemsCompleted || [],
+      },
     });
   } catch (error) {
     console.error("Error fetching devotion plan progress:", error);
@@ -241,7 +261,9 @@ const updateDevotionPlanProgress = async (req, res) => {
     // Verify devotion belongs to this plan
     const plan = await DevotionPlan.findById(id);
     if (!plan.items.includes(devotionId)) {
-      return res.status(400).json({ error: "Devotion does not belong to this plan" });
+      return res
+        .status(400)
+        .json({ error: "Devotion does not belong to this plan" });
     }
 
     if (completed) {
@@ -345,7 +367,8 @@ const updateDevotionPlan = async (req, res) => {
 
     if (title) plan.title = title;
     if (description !== undefined) plan.description = description;
-    if (published !== undefined) plan.published = published === "true" || published === true;
+    if (published !== undefined)
+      plan.published = published === "true" || published === true;
 
     if (req.file) {
       plan.image = await uploadImage(req.file);
@@ -396,7 +419,7 @@ const listPlanDevotions = async (req, res) => {
     // Get all devotions that are in the plan's items array
     // This ensures we only count devotions that are actually linked to the plan
     const devotionIds = plan.items || [];
-    
+
     // Fetch all devotions by their IDs and maintain order
     const devotions = await Devotion.find({ _id: { $in: devotionIds } })
       .sort({ order: 1 })
@@ -414,7 +437,9 @@ const listPlanDevotions = async (req, res) => {
   } catch (error) {
     console.error("Error listing plan devotions:", error);
     console.error("Error stack:", error.stack);
-    res.status(500).json({ error: "Internal Server Error", message: error.message });
+    res
+      .status(500)
+      .json({ error: "Internal Server Error", message: error.message });
   }
 };
 
@@ -443,8 +468,11 @@ const createPlanDevotion = async (req, res) => {
     }
 
     // Get max order in plan
-    const existingDevotions = await Devotion.find({ planId: id }).sort({ order: -1 }).limit(1);
-    const maxOrder = existingDevotions.length > 0 ? existingDevotions[0].order : -1;
+    const existingDevotions = await Devotion.find({ planId: id })
+      .sort({ order: -1 })
+      .limit(1);
+    const maxOrder =
+      existingDevotions.length > 0 ? existingDevotions[0].order : -1;
 
     const devotion = new Devotion({
       month: month || "",
@@ -470,7 +498,10 @@ const createPlanDevotion = async (req, res) => {
 
     // Reload plan to verify it was saved
     const updatedPlan = await DevotionPlan.findById(id);
-    console.log("[createPlanDevotion] Plan items count after save:", updatedPlan.items.length);
+    console.log(
+      "[createPlanDevotion] Plan items count after save:",
+      updatedPlan.items.length
+    );
 
     // Populate the saved devotion for response
     const populatedDevotion = await Devotion.findById(savedDevotion._id);
@@ -478,7 +509,9 @@ const createPlanDevotion = async (req, res) => {
   } catch (error) {
     console.error("Error creating plan devotion:", error);
     console.error("Error stack:", error.stack);
-    res.status(500).json({ error: "Internal Server Error", message: error.message });
+    res
+      .status(500)
+      .json({ error: "Internal Server Error", message: error.message });
   }
 };
 
@@ -494,7 +527,9 @@ const updatePlanDevotion = async (req, res) => {
     }
 
     if (!plan.items.includes(devotionId)) {
-      return res.status(400).json({ error: "Devotion does not belong to this plan" });
+      return res
+        .status(400)
+        .json({ error: "Devotion does not belong to this plan" });
     }
 
     const devotion = await Devotion.findById(devotionId);
@@ -541,11 +576,15 @@ const deletePlanDevotion = async (req, res) => {
     }
 
     if (!plan.items.includes(devotionId)) {
-      return res.status(400).json({ error: "Devotion does not belong to this plan" });
+      return res
+        .status(400)
+        .json({ error: "Devotion does not belong to this plan" });
     }
 
     // Remove from plan items
-    plan.items = plan.items.filter((itemId) => itemId.toString() !== devotionId.toString());
+    plan.items = plan.items.filter(
+      (itemId) => itemId.toString() !== devotionId.toString()
+    );
     await plan.save();
 
     // Remove from all user progress
@@ -557,7 +596,9 @@ const deletePlanDevotion = async (req, res) => {
     // Delete the devotion
     await Devotion.findByIdAndDelete(devotionId);
 
-    res.status(200).json({ message: "Devotion deleted from plan successfully" });
+    res
+      .status(200)
+      .json({ message: "Devotion deleted from plan successfully" });
   } catch (error) {
     console.error("Error deleting plan devotion:", error);
     res.status(500).json({ error: "Internal Server Error" });
@@ -582,7 +623,9 @@ const reorderPlanDevotion = async (req, res) => {
 
     // Get all devotions in order
     const devotions = await Devotion.find({ planId: id }).sort({ order: 1 });
-    const currentIndex = devotions.findIndex((d) => d._id.toString() === devotionId);
+    const currentIndex = devotions.findIndex(
+      (d) => d._id.toString() === devotionId
+    );
 
     if (currentIndex === -1) {
       return res.status(400).json({ error: "Devotion not found in plan" });
@@ -630,4 +673,3 @@ module.exports = {
   deletePlanDevotion,
   reorderPlanDevotion,
 };
-
