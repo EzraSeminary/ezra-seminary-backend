@@ -68,7 +68,8 @@ const getDevotions = async (req, res) => {
     const query = {};
     // By default, exclude plan-specific devotions from general listing
     // unless client explicitly requests to include them via includePlan=true
-    const includePlan = String(req.query.includePlan || "").toLowerCase() === "true";
+    const includePlan =
+      String(req.query.includePlan || "").toLowerCase() === "true";
     if (!includePlan) {
       query.$or = [{ planId: { $exists: false } }, { planId: null }];
     }
@@ -123,7 +124,7 @@ const getDevotions = async (req, res) => {
       const origin = `${req.protocol}://${req.get("host")}`;
       devotions = devotions.map((d) => {
         const devotion = { ...d };
-        
+
         // Normalize image URL
         if (
           devotion &&
@@ -133,11 +134,18 @@ const getDevotions = async (req, res) => {
         ) {
           devotion.image = `${origin}/images/${devotion.image}`;
         }
-        
-        // Add likes and comments counts
-        devotion.likesCount = Array.isArray(devotion.likes) ? devotion.likes.length : 0;
-        devotion.commentsCount = Array.isArray(devotion.comments) ? devotion.comments.length : 0;
-        
+
+        // Add likes, comments, and shares counts
+        devotion.likesCount = Array.isArray(devotion.likes)
+          ? devotion.likes.length
+          : 0;
+        devotion.commentsCount = Array.isArray(devotion.comments)
+          ? devotion.comments.length
+          : 0;
+        devotion.sharesCount = Array.isArray(devotion.shares)
+          ? devotion.shares.length
+          : 0;
+
         // Check if current user liked this devotion (if authenticated)
         if (req.user && Array.isArray(devotion.likes)) {
           devotion.isLiked = devotion.likes.some(
@@ -146,11 +154,12 @@ const getDevotions = async (req, res) => {
         } else {
           devotion.isLiked = false;
         }
-        
-        // Don't send full likes/comments arrays in list view for performance
+
+        // Don't send full likes/comments/shares arrays in list view for performance
         delete devotion.likes;
         delete devotion.comments;
-        
+        delete devotion.shares;
+
         return devotion;
       });
     }
@@ -288,11 +297,18 @@ const getDevotionsByYear = async (req, res) => {
     if (Array.isArray(devotions)) {
       devotions = devotions.map((d) => {
         const devotion = { ...d };
-        
-        // Add likes and comments counts
-        devotion.likesCount = Array.isArray(devotion.likes) ? devotion.likes.length : 0;
-        devotion.commentsCount = Array.isArray(devotion.comments) ? devotion.comments.length : 0;
-        
+
+        // Add likes, comments, and shares counts
+        devotion.likesCount = Array.isArray(devotion.likes)
+          ? devotion.likes.length
+          : 0;
+        devotion.commentsCount = Array.isArray(devotion.comments)
+          ? devotion.comments.length
+          : 0;
+        devotion.sharesCount = Array.isArray(devotion.shares)
+          ? devotion.shares.length
+          : 0;
+
         // Check if current user liked this devotion (if authenticated)
         if (req.user && Array.isArray(devotion.likes)) {
           devotion.isLiked = devotion.likes.some(
@@ -301,11 +317,12 @@ const getDevotionsByYear = async (req, res) => {
         } else {
           devotion.isLiked = false;
         }
-        
-        // Don't send full likes/comments arrays in list view for performance
+
+        // Don't send full likes/comments/shares arrays in list view for performance
         delete devotion.likes;
         delete devotion.comments;
-        
+        delete devotion.shares;
+
         return devotion;
       });
     }
@@ -396,7 +413,7 @@ const toggleLikeDevotion = async (req, res) => {
     const likeIndex = devotion.likes.findIndex(
       (likeId) => likeId.toString() === userId.toString()
     );
-    
+
     if (likeIndex > -1) {
       // User already liked, remove the like
       devotion.likes.splice(likeIndex, 1);
@@ -561,7 +578,9 @@ const deleteComment = async (req, res) => {
     const isAdmin = req.user.role === "Admin" || req.user.role === "Instructor";
 
     if (!isOwner && !isAdmin) {
-      return res.status(403).json({ error: "Not authorized to delete this comment" });
+      return res
+        .status(403)
+        .json({ error: "Not authorized to delete this comment" });
     }
 
     // Remove the comment
@@ -573,6 +592,65 @@ const deleteComment = async (req, res) => {
     });
   } catch (error) {
     console.error("Error deleting comment:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+// Track a share (add user to shares array)
+const trackShare = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user._id;
+
+    if (!userId) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
+
+    const devotion = await Devotion.findById(id);
+    if (!devotion) {
+      return res.status(404).json({ error: "Devotion not found" });
+    }
+
+    // Initialize shares array if it doesn't exist
+    if (!Array.isArray(devotion.shares)) {
+      devotion.shares = [];
+    }
+
+    // Check if user already shared this devotion (optional - you might want to allow multiple shares)
+    // For now, we'll track each share, but you can modify this to prevent duplicates if needed
+    const hasShared = devotion.shares.some(
+      (shareId) => shareId.toString() === userId.toString()
+    );
+
+    // Add the share (even if user already shared, we count it as a new share)
+    devotion.shares.push(userId);
+    await devotion.save();
+
+    res.status(200).json({
+      message: "Share tracked successfully",
+      sharesCount: devotion.shares.length,
+    });
+  } catch (error) {
+    console.error("Error tracking share:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+// Get shares count for a devotion
+const getDevotionShares = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const devotion = await Devotion.findById(id).select("shares").lean();
+    if (!devotion) {
+      return res.status(404).json({ error: "Devotion not found" });
+    }
+
+    res.status(200).json({
+      sharesCount: Array.isArray(devotion.shares) ? devotion.shares.length : 0,
+    });
+  } catch (error) {
+    console.error("Error fetching shares:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
@@ -590,4 +668,6 @@ module.exports = {
   addComment,
   getDevotionComments,
   deleteComment,
+  trackShare,
+  getDevotionShares,
 };

@@ -1,5 +1,4 @@
 node_modules/
-.env
 .codegpt
 
 # Migration and utility scripts

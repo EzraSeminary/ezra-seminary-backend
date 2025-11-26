@@ -8,7 +8,7 @@ const devotionSchema = new mongoose.Schema(
     day: String,
     year: {
       type: Number,
-      required: function() {
+      required: function () {
         // Only required if not part of a plan
         return !this.planId;
       },
@@ -56,6 +56,13 @@ const devotionSchema = new mongoose.Schema(
           type: Date,
           default: Date.now,
         },
+      },
+    ],
+    // Shares: array of user IDs who shared this devotion
+    shares: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
       },
     ],
   },

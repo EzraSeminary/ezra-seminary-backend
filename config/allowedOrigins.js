@@ -13,6 +13,8 @@ const allowedOrigins = [
   "https://ezra-seminary.netlify.app/",
   "http://ezraseminary.org",
   "https://ezraseminary.org",
+  "http://www.ezraseminary.org",
+  "https://www.ezraseminary.org",
   "https://polite-sky-0f7f49103.5.azurestaticapps.net",
 ];
 

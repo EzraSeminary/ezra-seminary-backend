@@ -25,6 +25,8 @@ const {
   addComment,
   getDevotionComments,
   deleteComment,
+  trackShare,
+  getDevotionShares,
 } = devotionController;
 
 // router.use(verifyJWT);
@@ -54,6 +56,10 @@ router.route("/:id/likes").get(optionalAuth, getDevotionLikes); // Public endpoi
 router.route("/:id/comments").get(getDevotionComments); // Public endpoint
 router.route("/:id/comments").post(verifyJWT, addComment); // Requires authentication
 router.route("/:id/comments/:commentId").delete(verifyJWT, deleteComment); // Requires authentication
+
+// Share routes
+router.route("/:id/share").post(verifyJWT, trackShare); // Requires authentication
+router.route("/:id/shares").get(getDevotionShares); // Public endpoint
 
 // Generic /:id routes (must come AFTER more specific routes)
 router.route("/:id").delete(verifyJWT, requireAdmin, deleteDevotion);

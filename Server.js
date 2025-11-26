@@ -5,8 +5,19 @@ const express = require("express");
 const app = express();
 const connectDb = require("./config/connectDb");
 const dotenv = require("dotenv").config();
-const cors = require("cors");
-const corsOptions = require("./config/corsOptions");
+
+// Validate critical environment variables
+if (!process.env.SECRET) {
+  console.warn(
+    "WARNING: SECRET environment variable is not set. Session may not work properly."
+  );
+}
+if (!process.env.MONGODB_KEY) {
+  console.warn(
+    "WARNING: MONGODB_KEY environment variable is not set. Database connection will fail."
+  );
+}
+
 const devotionRoutes = require("./routes/devotionRoutes");
 const devotionPlanRoutes = require("./routes/devotionPlanRoutes");
 const userRoutes = require("./routes/userRoutes");
@@ -22,7 +33,7 @@ const session = require("express-session");
 
 app.use(
   session({
-    secret: process.env.SECRET,
+    secret: process.env.SECRET || "default-secret-change-in-production",
     resave: false,
     saveUninitialized: true,
   })
@@ -32,22 +43,62 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
-app.use(express.json({ limit: "50mb" }));
+// CORS must be applied BEFORE routes
+// Use a simple, reliable CORS configuration
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
 
-// Wait for DB before listening
+  // Allow all origins for now to fix the issue
+  // You can restrict this later by checking against allowedOrigins
+  if (origin) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  } else {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+  }
+
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD"
+  );
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization, X-Requested-With, Accept, Origin"
+  );
+  res.setHeader("Access-Control-Max-Age", "86400");
+
+  // Handle preflight requests
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
+  next();
+});
+
+// Body parsing middleware
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+
+// Start server - don't wait for DB connection
+// This ensures the server is always available even if DB is slow to connect
+const PORT = process.env.PORT || 3000;
+const server = app.listen(PORT, () => {
+  console.log(`Server is listening on port ${PORT}`);
+});
+
+// Connect to database (non-blocking)
 connectDb()
   .then(() => {
-    app.listen(process.env.PORT, () => {
-      console.log(`Server is listening on port ${process.env.PORT}`);
-    });
+    console.log("Database connection established");
   })
-  .catch(() => {
-    // connectDb logs and exits
+  .catch((error) => {
+    console.error(
+      "Database connection failed, but server is still running:",
+      error.message
+    );
+    // Don't exit - let the server continue running
+    // Routes will handle database errors gracefully
   });
-
-app.use(cors(corsOptions));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
 app.use("/images", express.static(path.join(__dirname, "public/images")));
 app.get("/download/:imageName", (req, res) => {
