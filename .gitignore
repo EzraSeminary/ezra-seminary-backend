@@ -1,4 +1,17 @@
-.env
-/node_modules
 
+/node_modules
+.env
 .codegpt
+
+./migrate-to-imagekit.js
+./migrate-database-urls.js
+./migrate-now.js
+./run-migration-via-api.sh
+./diagnose-mongodb.js
+./check-env.js
+./migrate-to-imagekit.js
+./migrate-database-urls.js
+./migrate-now.js
+./run-migration-via-api.sh
+./diagnose-mongodb.js
+./check-env.js

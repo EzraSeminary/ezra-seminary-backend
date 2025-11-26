@@ -387,8 +387,15 @@ const toggleLikeDevotion = async (req, res) => {
       return res.status(404).json({ error: "Devotion not found" });
     }
 
+    // Initialize likes array if it doesn't exist
+    if (!Array.isArray(devotion.likes)) {
+      devotion.likes = [];
+    }
+
     // Check if user already liked this devotion
-    const likeIndex = devotion.likes.indexOf(userId);
+    const likeIndex = devotion.likes.findIndex(
+      (likeId) => likeId.toString() === userId.toString()
+    );
     
     if (likeIndex > -1) {
       // User already liked, remove the like
@@ -460,6 +467,11 @@ const addComment = async (req, res) => {
       return res.status(404).json({ error: "Devotion not found" });
     }
 
+    // Initialize comments array if it doesn't exist
+    if (!Array.isArray(devotion.comments)) {
+      devotion.comments = [];
+    }
+
     // Add the comment
     const newComment = {
       user: userId,
@@ -505,8 +517,11 @@ const getDevotionComments = async (req, res) => {
       return res.status(404).json({ error: "Devotion not found" });
     }
 
+    // Handle case where comments might be undefined or null
+    const comments = Array.isArray(devotion.comments) ? devotion.comments : [];
+
     // Sort comments by creation date (newest first)
-    const sortedComments = devotion.comments.sort(
+    const sortedComments = comments.sort(
       (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
     );
 

@@ -45,11 +45,7 @@ router
   .route("/copy-year")
   .post(verifyJWT, requireAdmin, createDevotionsForNewYear);
 
-router.route("/:id").delete(verifyJWT, requireAdmin, deleteDevotion);
-router
-  .route("/:id")
-  .put(upload.single("image"), verifyJWT, requireAdmin, updateDevotion); // update
-
+// IMPORTANT: More specific routes must come BEFORE generic /:id route
 // Like/Unlike routes (requires authentication)
 router.route("/:id/like").post(verifyJWT, toggleLikeDevotion);
 router.route("/:id/likes").get(optionalAuth, getDevotionLikes); // Public endpoint, but checks auth if token provided
@@ -58,5 +54,11 @@ router.route("/:id/likes").get(optionalAuth, getDevotionLikes); // Public endpoi
 router.route("/:id/comments").get(getDevotionComments); // Public endpoint
 router.route("/:id/comments").post(verifyJWT, addComment); // Requires authentication
 router.route("/:id/comments/:commentId").delete(verifyJWT, deleteComment); // Requires authentication
+
+// Generic /:id routes (must come AFTER more specific routes)
+router.route("/:id").delete(verifyJWT, requireAdmin, deleteDevotion);
+router
+  .route("/:id")
+  .put(upload.single("image"), verifyJWT, requireAdmin, updateDevotion); // update
 
 module.exports = router;
