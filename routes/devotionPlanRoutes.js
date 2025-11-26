@@ -15,6 +15,7 @@ const {
   startDevotionPlan,
   updateDevotionPlanProgress,
   completeDevotionPlan,
+  restartDevotionPlan,
   createDevotionPlan,
   updateDevotionPlan,
   deleteDevotionPlan,
@@ -50,6 +51,9 @@ router.put("/:id/progress", verifyJWT, updateDevotionPlanProgress);
 
 // Complete a devotion plan
 router.post("/:id/complete", verifyJWT, completeDevotionPlan);
+
+// Restart a devotion plan
+router.post("/:id/restart", verifyJWT, restartDevotionPlan);
 
 // Admin endpoints (requires auth + admin)
 // Create devotion plan

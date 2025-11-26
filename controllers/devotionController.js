@@ -1,7 +1,7 @@
 // controllers/devotionController.js
 
 const Devotion = require("../models/Devotion");
-const { uploadImage } = require("../middleware/cloudinary"); // Make sure to require your new uploadImage function
+const { uploadImage } = require("../middleware/imagekit"); // Using ImageKit instead of Cloudinary
 const { getCurrentEthiopianYear } = require("../utils/devotionUtils");
 
 const createDevotion = async (req, res) => {
@@ -118,18 +118,40 @@ const getDevotions = async (req, res) => {
     }
 
     // If you store filenames and serve from /images, normalize to absolute URLs:
+    // Also add likes and comments counts
     if (Array.isArray(devotions)) {
       const origin = `${req.protocol}://${req.get("host")}`;
       devotions = devotions.map((d) => {
+        const devotion = { ...d };
+        
+        // Normalize image URL
         if (
-          d &&
-          d.image &&
-          typeof d.image === "string" &&
-          !d.image.startsWith("http")
+          devotion &&
+          devotion.image &&
+          typeof devotion.image === "string" &&
+          !devotion.image.startsWith("http")
         ) {
-          return { ...d, image: `${origin}/images/${d.image}` };
+          devotion.image = `${origin}/images/${devotion.image}`;
         }
-        return d;
+        
+        // Add likes and comments counts
+        devotion.likesCount = Array.isArray(devotion.likes) ? devotion.likes.length : 0;
+        devotion.commentsCount = Array.isArray(devotion.comments) ? devotion.comments.length : 0;
+        
+        // Check if current user liked this devotion (if authenticated)
+        if (req.user && Array.isArray(devotion.likes)) {
+          devotion.isLiked = devotion.likes.some(
+            (likeId) => likeId.toString() === req.user._id.toString()
+          );
+        } else {
+          devotion.isLiked = false;
+        }
+        
+        // Don't send full likes/comments arrays in list view for performance
+        delete devotion.likes;
+        delete devotion.comments;
+        
+        return devotion;
       });
     }
 
@@ -257,9 +279,36 @@ const getDevotionsByYear = async (req, res) => {
     // Validate 'sort' parameter
     const sortOrder = sort.toLowerCase() === "asc" ? 1 : -1;
 
-    const devotions = await Devotion.find({ year: yearNum })
+    let devotions = await Devotion.find({ year: yearNum })
       .sort({ createdAt: sortOrder })
-      .limit(limitNum);
+      .limit(limitNum)
+      .lean();
+
+    // Add likes and comments counts, and isLiked status
+    if (Array.isArray(devotions)) {
+      devotions = devotions.map((d) => {
+        const devotion = { ...d };
+        
+        // Add likes and comments counts
+        devotion.likesCount = Array.isArray(devotion.likes) ? devotion.likes.length : 0;
+        devotion.commentsCount = Array.isArray(devotion.comments) ? devotion.comments.length : 0;
+        
+        // Check if current user liked this devotion (if authenticated)
+        if (req.user && Array.isArray(devotion.likes)) {
+          devotion.isLiked = devotion.likes.some(
+            (likeId) => likeId.toString() === req.user._id.toString()
+          );
+        } else {
+          devotion.isLiked = false;
+        }
+        
+        // Don't send full likes/comments arrays in list view for performance
+        delete devotion.likes;
+        delete devotion.comments;
+        
+        return devotion;
+      });
+    }
 
     res.status(200).json(devotions);
   } catch (error) {
@@ -323,6 +372,196 @@ const createDevotionsForNewYear = async (req, res) => {
   }
 };
 
+// Like/Unlike a devotion
+const toggleLikeDevotion = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user._id;
+
+    if (!userId) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
+
+    const devotion = await Devotion.findById(id);
+    if (!devotion) {
+      return res.status(404).json({ error: "Devotion not found" });
+    }
+
+    // Check if user already liked this devotion
+    const likeIndex = devotion.likes.indexOf(userId);
+    
+    if (likeIndex > -1) {
+      // User already liked, remove the like
+      devotion.likes.splice(likeIndex, 1);
+    } else {
+      // User hasn't liked, add the like
+      devotion.likes.push(userId);
+    }
+
+    await devotion.save();
+
+    res.status(200).json({
+      message: likeIndex > -1 ? "Like removed" : "Like added",
+      likesCount: devotion.likes.length,
+      isLiked: likeIndex === -1, // true if we just added, false if we just removed
+    });
+  } catch (error) {
+    console.error("Error toggling like:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+// Get likes for a devotion
+const getDevotionLikes = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?._id; // Optional, user might not be logged in
+
+    const devotion = await Devotion.findById(id).select("likes").lean();
+    if (!devotion) {
+      return res.status(404).json({ error: "Devotion not found" });
+    }
+
+    // Check if user liked this devotion
+    let isLiked = false;
+    if (userId && Array.isArray(devotion.likes)) {
+      isLiked = devotion.likes.some(
+        (likeId) => likeId.toString() === userId.toString()
+      );
+    }
+
+    res.status(200).json({
+      likesCount: Array.isArray(devotion.likes) ? devotion.likes.length : 0,
+      isLiked,
+    });
+  } catch (error) {
+    console.error("Error fetching likes:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+// Add a comment to a devotion
+const addComment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { text } = req.body;
+    const userId = req.user._id;
+
+    if (!userId) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
+
+    if (!text || text.trim() === "") {
+      return res.status(400).json({ error: "Comment text is required" });
+    }
+
+    const devotion = await Devotion.findById(id);
+    if (!devotion) {
+      return res.status(404).json({ error: "Devotion not found" });
+    }
+
+    // Add the comment
+    const newComment = {
+      user: userId,
+      text: text.trim(),
+      createdAt: new Date(),
+    };
+
+    devotion.comments.push(newComment);
+    await devotion.save();
+
+    // Populate user info for the new comment
+    await devotion.populate({
+      path: "comments.user",
+      select: "firstName lastName avatar",
+    });
+
+    const addedComment = devotion.comments[devotion.comments.length - 1];
+
+    res.status(201).json({
+      message: "Comment added successfully",
+      comment: addedComment,
+    });
+  } catch (error) {
+    console.error("Error adding comment:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+// Get comments for a devotion
+const getDevotionComments = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const devotion = await Devotion.findById(id)
+      .select("comments")
+      .populate({
+        path: "comments.user",
+        select: "firstName lastName avatar",
+      })
+      .lean();
+
+    if (!devotion) {
+      return res.status(404).json({ error: "Devotion not found" });
+    }
+
+    // Sort comments by creation date (newest first)
+    const sortedComments = devotion.comments.sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    );
+
+    res.status(200).json({
+      comments: sortedComments,
+      count: sortedComments.length,
+    });
+  } catch (error) {
+    console.error("Error fetching comments:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+// Delete a comment
+const deleteComment = async (req, res) => {
+  try {
+    const { id, commentId } = req.params;
+    const userId = req.user._id;
+
+    if (!userId) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
+
+    const devotion = await Devotion.findById(id);
+    if (!devotion) {
+      return res.status(404).json({ error: "Devotion not found" });
+    }
+
+    // Find the comment
+    const comment = devotion.comments.id(commentId);
+    if (!comment) {
+      return res.status(404).json({ error: "Comment not found" });
+    }
+
+    // Check if user is the owner of the comment or is an admin/instructor
+    const isOwner = comment.user.toString() === userId.toString();
+    const isAdmin = req.user.role === "Admin" || req.user.role === "Instructor";
+
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ error: "Not authorized to delete this comment" });
+    }
+
+    // Remove the comment
+    devotion.comments.pull(commentId);
+    await devotion.save();
+
+    res.status(200).json({
+      message: "Comment deleted successfully",
+    });
+  } catch (error) {
+    console.error("Error deleting comment:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
 module.exports = {
   createDevotion,
   getDevotions,
@@ -331,4 +570,9 @@ module.exports = {
   getAvailableYears,
   getDevotionsByYear,
   createDevotionsForNewYear,
+  toggleLikeDevotion,
+  getDevotionLikes,
+  addComment,
+  getDevotionComments,
+  deleteComment,
 };

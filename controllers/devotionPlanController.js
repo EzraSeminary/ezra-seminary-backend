@@ -3,7 +3,7 @@
 const DevotionPlan = require("../models/DevotionPlan");
 const UserDevotionPlan = require("../models/UserDevotionPlan");
 const Devotion = require("../models/Devotion");
-const { uploadImage } = require("../middleware/cloudinary");
+const { uploadImage } = require("../middleware/imagekit"); // Using ImageKit instead of Cloudinary
 
 // Get all devotion plans (public)
 const getDevotionPlans = async (req, res) => {
@@ -323,6 +323,34 @@ const completeDevotionPlan = async (req, res) => {
     });
   } catch (error) {
     console.error("Error completing devotion plan:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+// Restart a devotion plan (reset progress and status)
+const restartDevotionPlan = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user._id;
+
+    const userPlan = await UserDevotionPlan.findOne({ userId, planId: id });
+    if (!userPlan) {
+      return res.status(404).json({ error: "Plan not started by user" });
+    }
+
+    // Reset progress
+    userPlan.itemsCompleted = [];
+    userPlan.status = "in_progress";
+    userPlan.completedAt = undefined;
+    userPlan.startedAt = new Date(); // Update startedAt to now
+    await userPlan.save();
+
+    res.status(200).json({
+      message: "Plan restarted successfully",
+      userPlan,
+    });
+  } catch (error) {
+    console.error("Error restarting devotion plan:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
@@ -672,4 +700,5 @@ module.exports = {
   updatePlanDevotion,
   deletePlanDevotion,
   reorderPlanDevotion,
+  restartDevotionPlan,
 };

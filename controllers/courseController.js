@@ -1,50 +1,8 @@
 const express = require("express");
-const multer = require("multer");
-const cloudinary = require("cloudinary").v2;
-const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const Course = require("../models/Course");
 const courseController = express.Router();
 const verifyJWT = require("../middleware/requireAuth");
-const path = require("path");
-
-// Configure Cloudinary
-cloudinary.config({
-  cloud_name: "dy233t3yl",
-  api_key: "737799364788289",
-  api_secret: "vnIYVSSiA5D3PVtRL22gt8i9zjE",
-});
-
-// Configure Cloudinary storage
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: "Courses",
-    allowed_formats: ["jpg", "png", "jpeg", "gif", "mp3", "wav", "webp"],
-    resource_type: "auto",
-    public_id: (req, file) => {
-      const originalName = path.parse(file.originalname).name;
-      const timestamp = Date.now();
-      const randomId = Math.random().toString(36).substring(2, 15);
-      return `${originalName}_${timestamp}_${randomId}`; // Return unique filename with timestamp and random ID
-    },
-  },
-});
-
-// Configure Multer
-const upload = multer({
-  storage: storage,
-  limits: { fileSize: 15 * 1024 * 1024 }, // 15 MB limit
-  fileFilter: (req, file, cb) => {
-    if (
-      file.mimetype.startsWith("image/") ||
-      file.mimetype.startsWith("audio/")
-    ) {
-      cb(null, true);
-    } else {
-      cb(new Error("Only image & audio files are allowed"), false);
-    }
-  },
-});
+const { upload, uploadToImageKit, deleteFromImageKit } = require("../middleware/imagekit-course");
 
 // get all courses
 courseController.get("/getall", async (req, res) => {
@@ -138,7 +96,8 @@ courseController.post("/create", upload.any(), async (req, res) => {
                 const fieldName = `chapter_${chapterIndex}_slide_${slideIndex}_img`;
                 const file = files.find((f) => f.fieldname === fieldName);
                 if (file) {
-                  return { ...element, value: file.path };
+                  const imageUrl = await uploadToImageKit(file, "Courses");
+                  return { ...element, value: imageUrl };
                 } else if (element.value && element.value.startsWith("http")) {
                   // If it's a URL, keep it as is
                   return element;
@@ -152,12 +111,13 @@ courseController.post("/create", upload.any(), async (req, res) => {
                 }`;
                 const file = files.find((f) => f.fieldname === fieldName);
                 if (file) {
+                  const fileUrl = await uploadToImageKit(file, "Courses");
                   return {
                     ...element,
                     value:
                       element.type === "mix"
-                        ? { ...element.value, file: file.path }
-                        : file.path,
+                        ? { ...element.value, file: fileUrl }
+                        : fileUrl,
                   };
                 }
               }
@@ -171,7 +131,10 @@ courseController.post("/create", upload.any(), async (req, res) => {
   );
 
   const imageFile = files.find((file) => file.fieldname === "image");
-  const imageUrl = imageFile ? imageFile.path : "";
+  let imageUrl = "";
+  if (imageFile) {
+    imageUrl = await uploadToImageKit(imageFile, "Courses");
+  }
 
   try {
     const newCourse = new Course({
@@ -238,17 +201,18 @@ courseController.put("/update/:id", upload.any(), async (req, res) => {
                   const file = files.find((f) => f.fieldname === fieldName);
                   if (file) {
                     console.log(
-                      `[UPDATE] Found file for ${fieldName}, updating element`
+                      `[UPDATE] Found file for ${fieldName}, uploading to ImageKit`
                     );
+                    const fileUrl = await uploadToImageKit(file, "Courses");
                     return {
                       ...element,
                       value:
                         element.type === "mix"
                           ? {
                               ...element.value,
-                              file: file.path,
+                              file: fileUrl,
                             }
-                          : file.path,
+                          : fileUrl,
                     };
                   }
                 }
@@ -272,9 +236,10 @@ courseController.put("/update/:id", upload.any(), async (req, res) => {
     const imageFile = files.find((file) => file.fieldname === "image");
     if (imageFile) {
       console.log(
-        `[UPDATE] New image file detected for course ${courseId}, updating from ${course.image} to ${imageFile.path}`
+        `[UPDATE] New image file detected for course ${courseId}, uploading to ImageKit`
       );
-      course.image = imageFile.path;
+      const imageUrl = await uploadToImageKit(imageFile, "Courses");
+      course.image = imageUrl;
     } else {
       console.log(
         `[UPDATE] No new image file for course ${courseId}, keeping existing image: ${course.image}`
@@ -301,9 +266,9 @@ courseController.delete("/delete/:id", async (req, res) => {
       return res.status(404).json({ message: "Course not found" });
     }
 
-    // Delete associated files from Cloudinary
+    // Delete associated files from ImageKit
     await Promise.all([
-      cloudinary.uploader.destroy(course.image).catch((err) => {
+      deleteFromImageKit(course.image).catch((err) => {
         console.error("Failed to delete course image:", err);
       }),
       ...course.chapters.flatMap((chapter) =>
@@ -316,13 +281,11 @@ courseController.delete("/delete/:id", async (req, res) => {
                 (element.type === "mix" && element.value.file)
             )
             .map((element) =>
-              cloudinary.uploader
-                .destroy(
-                  element.type === "mix" ? element.value.file : element.value
-                )
-                .catch((err) => {
-                  console.error("Failed to delete element file:", err);
-                })
+              deleteFromImageKit(
+                element.type === "mix" ? element.value.file : element.value
+              ).catch((err) => {
+                console.error("Failed to delete element file:", err);
+              })
             )
         )
       ),

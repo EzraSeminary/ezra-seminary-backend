@@ -71,6 +71,7 @@ app.use("/course", courseController);
 app.use("/quiz", quizController);
 app.use("/analytics", analyticsRoutes);
 app.use("/sslLinks", sslLinkRoutes);
+app.use("/migration", require("./routes/migrationRoutes"));
 
 // app.use("/images", express.static("public/images"));
 app.all("*", (req, res) => {

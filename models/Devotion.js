@@ -33,6 +33,31 @@ const devotionSchema = new mongoose.Schema(
       type: Number,
       default: 0, // Used for ordering devotions within a plan
     },
+    // Likes: array of user IDs who liked this devotion
+    likes: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+    // Comments: array of comment objects
+    comments: [
+      {
+        user: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          required: true,
+        },
+        text: {
+          type: String,
+          required: true,
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
   },
   {
     timestamps: true,
