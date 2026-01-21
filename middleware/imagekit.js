@@ -1,4 +1,4 @@
-// imagekit configuration for devotion saving
+// imagekit configuration for file saving (images + documents)
 
 const ImageKit = require("imagekit");
 
@@ -33,8 +33,32 @@ const uploadImage = (file) => {
   });
 };
 
+const uploadFile = (file, folderPath = "/Explore") => {
+  return new Promise((resolve, reject) => {
+    const originalName = file.originalname.split(".")[0];
+    const extension = file.originalname.split(".").pop();
+    const fileName = `${originalName}_${Date.now()}.${extension}`;
+
+    imagekit.upload(
+      {
+        file: file.buffer,
+        fileName,
+        folder: folderPath,
+      },
+      (error, result) => {
+        if (error) {
+          console.error("ImageKit upload failed:", error);
+          return reject(error);
+        }
+        resolve(result.url);
+      }
+    );
+  });
+};
+
 module.exports = {
   imagekit,
   uploadImage,
+  uploadFile,
 };
 

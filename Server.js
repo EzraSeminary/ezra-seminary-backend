@@ -22,6 +22,7 @@ const devotionRoutes = require("./routes/devotionRoutes");
 const devotionPlanRoutes = require("./routes/devotionPlanRoutes");
 const userRoutes = require("./routes/userRoutes");
 const sslLinkRoutes = require("./routes/sslLinkRoutes");
+const exploreRoutes = require("./routes/exploreRoutes");
 const path = require("path");
 const courseController = require("./controllers/courseController");
 const quizController = require("./controllers/quizController");
@@ -143,6 +144,7 @@ app.use("/course", courseController);
 app.use("/quiz", quizController);
 app.use("/analytics", analyticsRoutes);
 app.use("/sslLinks", sslLinkRoutes);
+app.use("/explore", exploreRoutes);
 app.use("/migration", require("./routes/migrationRoutes"));
 
 // app.use("/images", express.static("public/images"));
