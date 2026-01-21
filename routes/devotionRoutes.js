@@ -27,6 +27,9 @@ const {
   deleteComment,
   trackShare,
   getDevotionShares,
+  getMonthsByYear,
+  getDevotionsByYearAndMonth,
+  batchUpdateDevotionYears,
 } = devotionController;
 
 // router.use(verifyJWT);
@@ -41,11 +44,17 @@ router.get("/", optionalAuth, getDevotions);
 router.route("/show").get(optionalAuth, getDevotions);
 
 // Year-specific routes
+// IMPORTANT: More specific routes must come BEFORE less specific routes
 router.route("/years").get(getAvailableYears);
+router.route("/year/:year/month/:month").get(optionalAuth, getDevotionsByYearAndMonth);
+router.route("/year/:year/months").get(getMonthsByYear);
 router.route("/year/:year").get(optionalAuth, getDevotionsByYear);
 router
   .route("/copy-year")
   .post(verifyJWT, requireAdmin, createDevotionsForNewYear);
+router
+  .route("/batch-update-years")
+  .post(verifyJWT, requireAdmin, batchUpdateDevotionYears);
 
 // IMPORTANT: More specific routes must come BEFORE generic /:id route
 // Like/Unlike routes (requires authentication)

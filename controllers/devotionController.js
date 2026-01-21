@@ -655,6 +655,182 @@ const getDevotionShares = async (req, res) => {
   }
 };
 
+// Get available months for a specific year (just month names, no data)
+const getMonthsByYear = async (req, res) => {
+  try {
+    const { year } = req.params;
+    const yearNum = parseInt(year, 10);
+    
+    if (isNaN(yearNum)) {
+      return res.status(400).json({ error: "Invalid year parameter" });
+    }
+
+    // Get distinct months for the given year
+    const months = await Devotion.distinct("month", { 
+      year: yearNum,
+      month: { $exists: true, $ne: "" } // Exclude empty months
+    });
+
+    // Sort months according to Ethiopian calendar order
+    const ethiopianMonths = [
+      "መስከረም",
+      "ጥቅምት",
+      "ህዳር",
+      "ታህሳስ",
+      "ጥር",
+      "የካቲት",
+      "መጋቢት",
+      "ሚያዚያ",
+      "ግንቦት",
+      "ሰኔ",
+      "ሐምሌ",
+      "ነሐሴ",
+      "ጳጉሜ",
+    ];
+
+    const sortedMonths = months
+      .filter(month => ethiopianMonths.includes(month))
+      .sort((a, b) => {
+        const indexA = ethiopianMonths.indexOf(a);
+        const indexB = ethiopianMonths.indexOf(b);
+        return indexA - indexB;
+      });
+
+    res.status(200).json(sortedMonths);
+  } catch (error) {
+    console.error("Error fetching months by year:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+// Batch update devotion years
+const batchUpdateDevotionYears = async (req, res) => {
+  try {
+    const { updates } = req.body; // Array of { id, year }
+    
+    if (!Array.isArray(updates) || updates.length === 0) {
+      return res.status(400).json({ error: "Updates array is required and must not be empty" });
+    }
+
+    const results = [];
+    const errors = [];
+
+    for (const update of updates) {
+      const { id, year } = update;
+      
+      if (!id || !year) {
+        errors.push({ id, error: "Missing id or year" });
+        continue;
+      }
+
+      const yearNum = parseInt(year, 10);
+      if (isNaN(yearNum)) {
+        errors.push({ id, error: "Invalid year value" });
+        continue;
+      }
+
+      try {
+        const updatedDevotion = await Devotion.findByIdAndUpdate(
+          id,
+          { year: yearNum },
+          { new: true }
+        );
+
+        if (!updatedDevotion) {
+          errors.push({ id, error: "Devotion not found" });
+        } else {
+          results.push({ id, year: yearNum, success: true });
+        }
+      } catch (error) {
+        errors.push({ id, error: error.message });
+      }
+    }
+
+    res.status(200).json({
+      message: `Updated ${results.length} devotions successfully`,
+      results,
+      errors: errors.length > 0 ? errors : undefined,
+    });
+  } catch (error) {
+    console.error("Error batch updating devotion years:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+// Get devotions for a specific year and month
+const getDevotionsByYearAndMonth = async (req, res) => {
+  try {
+    const { year, month } = req.params;
+    const yearNum = parseInt(year, 10);
+    
+    if (isNaN(yearNum)) {
+      return res.status(400).json({ error: "Invalid year parameter" });
+    }
+
+    if (!month) {
+      return res.status(400).json({ error: "Month parameter is required" });
+    }
+
+    // Build query
+    const query = { year: yearNum, month: month };
+
+    // Fetch devotions for the specific year and month
+    let devotions = await Devotion.find(query)
+      .sort({ day: -1 }) // Sort by day descending
+      .lean();
+
+    // Add likes and comments counts, and isLiked status
+    if (Array.isArray(devotions)) {
+      const origin = `${req.protocol}://${req.get("host")}`;
+      devotions = devotions.map((d) => {
+        const devotion = { ...d };
+
+        // Normalize image URL
+        if (
+          devotion &&
+          devotion.image &&
+          typeof devotion.image === "string" &&
+          !devotion.image.startsWith("http")
+        ) {
+          devotion.image = `${origin}/images/${devotion.image}`;
+        }
+
+        // Add likes, comments, and shares counts
+        devotion.likesCount = Array.isArray(devotion.likes)
+          ? devotion.likes.length
+          : 0;
+        devotion.commentsCount = Array.isArray(devotion.comments)
+          ? devotion.comments.length
+          : 0;
+        devotion.sharesCount = Array.isArray(devotion.shares)
+          ? devotion.shares.length
+          : 0;
+
+        // Check if current user liked this devotion (if authenticated)
+        if (req.user && Array.isArray(devotion.likes)) {
+          devotion.isLiked = devotion.likes.some(
+            (likeId) => likeId.toString() === req.user._id.toString()
+          );
+        } else {
+          devotion.isLiked = false;
+        }
+
+        // Don't send full likes/comments/shares arrays in list view for performance
+        delete devotion.likes;
+        delete devotion.comments;
+        delete devotion.shares;
+
+        return devotion;
+      });
+    }
+
+    res.status(200).json(devotions);
+  } catch (error) {
+    console.error("Error fetching devotions by year and month:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
 module.exports = {
   createDevotion,
   getDevotions,
@@ -670,4 +846,7 @@ module.exports = {
   deleteComment,
   trackShare,
   getDevotionShares,
+  getMonthsByYear,
+  getDevotionsByYearAndMonth,
+  batchUpdateDevotionYears,
 };

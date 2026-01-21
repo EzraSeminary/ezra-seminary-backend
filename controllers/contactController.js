@@ -93,12 +93,34 @@ const sendContactReply = async (req, res) => {
       return res.status(400).json({ error: "Subject and message are required." });
     }
 
+    // Check if email credentials are configured
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      return res.status(503).json({
+        error: "Email service not configured. EMAIL_USER and EMAIL_PASS environment variables are required.",
+        details: {
+          hasEmailUser: !!process.env.EMAIL_USER,
+          hasEmailPass: !!process.env.EMAIL_PASS,
+        },
+      });
+    }
+
     const contact = await Contact.findById(id);
     if (!contact) {
       return res.status(404).json({ error: "Contact message not found." });
     }
 
     const transporter = getTransporter();
+    
+    // Verify transporter connection before sending
+    try {
+      await transporter.verify();
+    } catch (verifyError) {
+      console.error("Email transporter verification failed:", verifyError);
+      return res.status(503).json({
+        error: "Email service connection failed. Please check EMAIL_USER and EMAIL_PASS configuration.",
+        details: verifyError.message,
+      });
+    }
 
     const mailOptions = {
       from: `Ezra Seminary <${process.env.EMAIL_USER}>`,
@@ -117,12 +139,43 @@ const sendContactReply = async (req, res) => {
     res.status(200).json({ message: "Reply sent successfully." });
   } catch (error) {
     console.error("Error sending contact reply:", error);
-    if (error && (error.code === "EAUTH" || error.responseCode === 535)) {
-      return res.status(401).json({
-        error: "Email auth failed. Check EMAIL_USER/EMAIL_PASS (use a Gmail App Password).",
+    console.error("Error details:", {
+      code: error.code,
+      responseCode: error.responseCode,
+      command: error.command,
+      message: error.message,
+    });
+    
+    // Check for email authentication/configuration errors
+    if (error && (
+      error.code === "EAUTH" || 
+      error.responseCode === 535 ||
+      error.code === "ECONNECTION" ||
+      error.code === "ETIMEDOUT" ||
+      (error.message && error.message.includes("Invalid login"))
+    )) {
+      // Email service configuration error
+      return res.status(503).json({
+        error: "Email service configuration error. Check EMAIL_USER/EMAIL_PASS (use a Gmail App Password).",
+        details: process.env.EMAIL_USER ? "EMAIL_USER is set" : "EMAIL_USER is NOT set",
       });
     }
-    res.status(500).json({ error: "Failed to send reply." });
+    
+    // Check if email credentials are missing
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      return res.status(503).json({
+        error: "Email service not configured. EMAIL_USER and EMAIL_PASS environment variables are required.",
+        details: {
+          hasEmailUser: !!process.env.EMAIL_USER,
+          hasEmailPass: !!process.env.EMAIL_PASS,
+        },
+      });
+    }
+    
+    res.status(500).json({ 
+      error: "Failed to send reply.",
+      details: error.message || "Unknown error occurred",
+    });
   }
 };
 

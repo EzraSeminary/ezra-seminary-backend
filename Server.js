@@ -43,33 +43,42 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
-// CORS must be applied BEFORE routes
-// Use a simple, reliable CORS configuration
+// CORS - MUST BE FIRST MIDDLEWARE - Works independently of env vars
+// This ensures CORS headers are ALWAYS set, even if server has issues
 app.use((req, res, next) => {
-  const origin = req.headers.origin;
+  try {
+    const origin = req.headers.origin;
 
-  // Allow all origins for now to fix the issue
-  // You can restrict this later by checking against allowedOrigins
-  if (origin) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-  } else {
+    // Always set CORS headers - allow all origins for now
+    if (origin) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+    } else {
+      res.setHeader("Access-Control-Allow-Origin", "*");
+    }
+
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader(
+      "Access-Control-Allow-Methods",
+      "GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD"
+    );
+    res.setHeader(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization, X-Requested-With, Accept, Origin"
+    );
+    res.setHeader("Access-Control-Max-Age", "86400");
+
+    // Handle preflight OPTIONS requests - MUST respond before any other logic
+    if (req.method === "OPTIONS") {
+      return res.status(200).end();
+    }
+  } catch (error) {
+    // Even if CORS setup fails, set basic headers
+    console.error("CORS error:", error);
     res.setHeader("Access-Control-Allow-Origin", "*");
-  }
-
-  res.setHeader("Access-Control-Allow-Credentials", "true");
-  res.setHeader(
-    "Access-Control-Allow-Methods",
-    "GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD"
-  );
-  res.setHeader(
-    "Access-Control-Allow-Headers",
-    "Content-Type, Authorization, X-Requested-With, Accept, Origin"
-  );
-  res.setHeader("Access-Control-Max-Age", "86400");
-
-  // Handle preflight requests
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
+    res.setHeader(
+      "Access-Control-Allow-Methods",
+      "GET, POST, PUT, DELETE, OPTIONS"
+    );
   }
 
   next();
@@ -79,22 +88,34 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
-// Start server - don't wait for DB connection
-// This ensures the server is always available even if DB is slow to connect
+// Start server IMMEDIATELY - don't wait for DB or env vars
+// This ensures the server is always available and CORS headers can be sent
 const PORT = process.env.PORT || 3000;
-const server = app.listen(PORT, () => {
-  console.log(`Server is listening on port ${PORT}`);
-});
 
-// Connect to database (non-blocking)
+// Start server - this MUST happen regardless of env vars or DB
+let server;
+try {
+  server = app.listen(PORT, () => {
+    console.log(`✅ Server is listening on port ${PORT}`);
+    console.log(`✅ CORS is enabled and working`);
+  });
+} catch (error) {
+  console.error("❌ Failed to start server:", error);
+  process.exit(1);
+}
+
+// Connect to database (non-blocking - server already running)
 connectDb()
   .then(() => {
-    console.log("Database connection established");
+    console.log("✅ Database connection established");
   })
   .catch((error) => {
     console.error(
-      "Database connection failed, but server is still running:",
+      "⚠️  Database connection failed, but server is still running:",
       error.message
+    );
+    console.error(
+      "⚠️  Set MONGODB_KEY environment variable on your hosting platform"
     );
     // Don't exit - let the server continue running
     // Routes will handle database errors gracefully
