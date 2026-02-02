@@ -109,10 +109,16 @@ const createItem = async (req, res) => {
       req.body;
     if (!categoryId) return res.status(400).json({ error: "categoryId is required" });
     if (!title) return res.status(400).json({ error: "title is required" });
-    if (!req.file) return res.status(400).json({ error: "file is required" });
 
-    const fileUrl = await uploadFile(req.file, "/Explore");
-    const fileType = detectFileType(req.file.mimetype, req.file.originalname);
+    // uploadExplore.fields(...) (used in the route) populates req.files as an object
+    // with arrays for each field (e.g. req.files.file = [ ... ]). Older code used
+    // req.file which is only present when using single-file middleware. Check
+    // req.files.file[0] instead.
+    const uploadedFile = req.files && req.files.file && req.files.file[0];
+    if (!uploadedFile) return res.status(400).json({ error: "file is required" });
+
+    const fileUrl = await uploadFile(uploadedFile, "/Explore");
+    const fileType = detectFileType(uploadedFile.mimetype, uploadedFile.originalname);
 
     let imageUrl = "";
     if (req.files && req.files.image && req.files.image[0]) {
@@ -124,9 +130,9 @@ const createItem = async (req, res) => {
       title,
       description,
       imageUrl,
-      fileUrl,
-      fileName: req.file.originalname,
-      mimeType: req.file.mimetype,
+  fileUrl,
+  fileName: uploadedFile.originalname,
+  mimeType: uploadedFile.mimetype,
       fileType,
       order: Number(order) || 0,
       isPublished: Boolean(isPublished),
