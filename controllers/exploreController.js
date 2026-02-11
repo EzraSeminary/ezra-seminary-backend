@@ -5,10 +5,7 @@ const { uploadFile } = require("../middleware/imagekit");
 function detectFileType(mimeType, fileName) {
   const lower = String(fileName || "").toLowerCase();
   if (mimeType === "application/pdf" || lower.endsWith(".pdf")) return "pdf";
-  if (
-    mimeType === "application/vnd.ms-powerpoint" ||
-    lower.endsWith(".ppt")
-  )
+  if (mimeType === "application/vnd.ms-powerpoint" || lower.endsWith(".ppt"))
     return "ppt";
   if (
     mimeType ===
@@ -91,9 +88,12 @@ const updateCategory = async (req, res) => {
     if (typeof title !== "undefined") update.title = title;
     if (typeof description !== "undefined") update.description = description;
     if (typeof order !== "undefined") update.order = Number(order) || 0;
-    if (typeof isPublished !== "undefined") update.isPublished = Boolean(isPublished);
+    if (typeof isPublished !== "undefined")
+      update.isPublished = Boolean(isPublished);
 
-    const cat = await ExploreCategory.findByIdAndUpdate(id, update, { new: true }).lean();
+    const cat = await ExploreCategory.findByIdAndUpdate(id, update, {
+      new: true,
+    }).lean();
     if (!cat) return res.status(404).json({ error: "Category not found" });
     res.status(200).json(cat);
   } catch (error) {
@@ -105,9 +105,15 @@ const updateCategory = async (req, res) => {
 // Admin: create item (multipart with file and optional image)
 const createItem = async (req, res) => {
   try {
-    const { categoryId, title, description = "", order = 0, isPublished = true } =
-      req.body;
-    if (!categoryId) return res.status(400).json({ error: "categoryId is required" });
+    const {
+      categoryId,
+      title,
+      description = "",
+      order = 0,
+      isPublished = true,
+    } = req.body;
+    if (!categoryId)
+      return res.status(400).json({ error: "categoryId is required" });
     if (!title) return res.status(400).json({ error: "title is required" });
 
     // uploadExplore.fields(...) (used in the route) populates req.files as an object
@@ -115,10 +121,14 @@ const createItem = async (req, res) => {
     // req.file which is only present when using single-file middleware. Check
     // req.files.file[0] instead.
     const uploadedFile = req.files && req.files.file && req.files.file[0];
-    if (!uploadedFile) return res.status(400).json({ error: "file is required" });
+    if (!uploadedFile)
+      return res.status(400).json({ error: "file is required" });
 
     const fileUrl = await uploadFile(uploadedFile, "/Explore");
-    const fileType = detectFileType(uploadedFile.mimetype, uploadedFile.originalname);
+    const fileType = detectFileType(
+      uploadedFile.mimetype,
+      uploadedFile.originalname
+    );
 
     let imageUrl = "";
     if (req.files && req.files.image && req.files.image[0]) {
@@ -130,9 +140,9 @@ const createItem = async (req, res) => {
       title,
       description,
       imageUrl,
-  fileUrl,
-  fileName: uploadedFile.originalname,
-  mimeType: uploadedFile.mimetype,
+      fileUrl,
+      fileName: uploadedFile.originalname,
+      mimeType: uploadedFile.mimetype,
       fileType,
       order: Number(order) || 0,
       isPublished: Boolean(isPublished),
@@ -183,7 +193,8 @@ const updateItem = async (req, res) => {
     if (typeof title !== "undefined") update.title = title;
     if (typeof description !== "undefined") update.description = description;
     if (typeof order !== "undefined") update.order = Number(order) || 0;
-    if (typeof isPublished !== "undefined") update.isPublished = Boolean(isPublished);
+    if (typeof isPublished !== "undefined")
+      update.isPublished = Boolean(isPublished);
     if (typeof categoryId !== "undefined") update.categoryId = categoryId;
 
     // Handle image upload if provided
@@ -191,7 +202,9 @@ const updateItem = async (req, res) => {
       update.imageUrl = await uploadFile(req.files.image[0], "/Explore/Images");
     }
 
-    const item = await ExploreItem.findByIdAndUpdate(id, update, { new: true }).lean();
+    const item = await ExploreItem.findByIdAndUpdate(id, update, {
+      new: true,
+    }).lean();
     if (!item) return res.status(404).json({ error: "Item not found" });
     res.status(200).json(item);
   } catch (error) {
@@ -240,4 +253,3 @@ module.exports = {
   deleteItem,
   deleteCategory,
 };
-
