@@ -7,7 +7,30 @@ const { upload, uploadToImageKit, deleteFromImageKit } = require("../middleware/
 // get all courses
 courseController.get("/getall", async (req, res) => {
   try {
-    const courses = await Course.find({}).select("-chapters");
+    // Destructure and set default values for query parameters
+    let { limit = 0, sort = "desc" } = req.query;
+
+    // Validate 'limit' parameter to ensure it's a non-negative integer
+    limit = parseInt(limit, 10);
+    if (isNaN(limit) || limit < 0) {
+      return res.status(400).json({ error: "Invalid 'limit' parameter" });
+    }
+    // Apply sensible defaults and caps to avoid timeouts on hosted envs
+    if (limit === 0) {
+      limit = 1000;
+    }
+    const MAX_LIMIT = 2000;
+    if (limit > MAX_LIMIT) {
+      limit = MAX_LIMIT;
+    }
+
+    // Validate 'sort' parameter
+    const sortOrder = sort.toLowerCase() === "asc" ? 1 : -1;
+
+    const courses = await Course.find({})
+      .select("-chapters")
+      .sort({ createdAt: sortOrder })
+      .limit(limit);
 
     // Get the chapter count for each course
     const coursesWithChapterCount = await Promise.all(
