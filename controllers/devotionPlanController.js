@@ -8,10 +8,31 @@ const { uploadImage } = require("../middleware/imagekit"); // Using ImageKit ins
 // Get all devotion plans (public)
 const getDevotionPlans = async (req, res) => {
   try {
+    // Destructure and set default values for query parameters
+    let { limit = 0, sort = "desc" } = req.query;
+
+    // Validate 'limit' parameter to ensure it's a non-negative integer
+    limit = parseInt(limit, 10);
+    if (isNaN(limit) || limit < 0) {
+      return res.status(400).json({ error: "Invalid 'limit' parameter" });
+    }
+    // Apply sensible defaults and caps to avoid timeouts on hosted envs
+    if (limit === 0) {
+      limit = 1000;
+    }
+    const MAX_LIMIT = 2000;
+    if (limit > MAX_LIMIT) {
+      limit = MAX_LIMIT;
+    }
+
+    // Validate 'sort' parameter
+    const sortOrder = sort.toLowerCase() === "asc" ? 1 : -1;
+
     // Get plans with populated items
     const plans = await DevotionPlan.find({ published: true })
       .populate("items", "title chapter verse image")
-      .sort({ createdAt: -1 })
+      .sort({ createdAt: sortOrder })
+      .limit(limit)
       .lean();
 
     // Count items from the items array (works whether populated or not)
@@ -73,6 +94,26 @@ const getUserDevotionPlans = async (req, res) => {
     const userId = req.user._id;
     const { status } = req.query;
 
+    // Destructure and set default values for query parameters
+    let { limit = 0, sort = "desc" } = req.query;
+
+    // Validate 'limit' parameter to ensure it's a non-negative integer
+    limit = parseInt(limit, 10);
+    if (isNaN(limit) || limit < 0) {
+      return res.status(400).json({ error: "Invalid 'limit' parameter" });
+    }
+    // Apply sensible defaults and caps to avoid timeouts on hosted envs
+    if (limit === 0) {
+      limit = 1000;
+    }
+    const MAX_LIMIT = 2000;
+    if (limit > MAX_LIMIT) {
+      limit = MAX_LIMIT;
+    }
+
+    // Validate 'sort' parameter
+    const sortOrder = sort.toLowerCase() === "asc" ? 1 : -1;
+
     console.log("[getUserDevotionPlans] User ID:", userId);
     console.log("[getUserDevotionPlans] Status filter:", status);
 
@@ -84,7 +125,8 @@ const getUserDevotionPlans = async (req, res) => {
     // First get user plans without nested populate to avoid errors
     const userPlans = await UserDevotionPlan.find(query)
       .populate("planId")
-      .sort({ createdAt: -1 })
+      .sort({ createdAt: sortOrder })
+      .limit(limit)
       .lean();
 
     console.log("[getUserDevotionPlans] Found userPlans:", userPlans.length);
@@ -438,6 +480,25 @@ const deleteDevotionPlan = async (req, res) => {
 const listPlanDevotions = async (req, res) => {
   try {
     const { id } = req.params;
+    // Destructure and set default values for query parameters
+    let { limit = 0, sort = "desc" } = req.query;
+
+    // Validate 'limit' parameter to ensure it's a non-negative integer
+    limit = parseInt(limit, 10);
+    if (isNaN(limit) || limit < 0) {
+      return res.status(400).json({ error: "Invalid 'limit' parameter" });
+    }
+    // Apply sensible defaults and caps to avoid timeouts on hosted envs
+    if (limit === 0) {
+      limit = 1000;
+    }
+    const MAX_LIMIT = 2000;
+    if (limit > MAX_LIMIT) {
+      limit = MAX_LIMIT;
+    }
+
+    // Validate 'sort' parameter
+    const sortOrder = sort.toLowerCase() === "asc" ? 1 : -1;
 
     const plan = await DevotionPlan.findById(id).lean();
     if (!plan) {
@@ -450,7 +511,8 @@ const listPlanDevotions = async (req, res) => {
 
     // Fetch all devotions by their IDs and maintain order
     const devotions = await Devotion.find({ _id: { $in: devotionIds } })
-      .sort({ order: 1 })
+      .sort({ order: sortOrder })
+      .limit(limit)
       .lean()
       .exec();
 
