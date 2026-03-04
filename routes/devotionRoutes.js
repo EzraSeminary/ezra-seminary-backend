@@ -19,6 +19,7 @@ const {
   updateDevotion,
   getAvailableYears,
   getDevotionsByYear,
+  getDevotionById,
   createDevotionsForNewYear,
   toggleLikeDevotion,
   getDevotionLikes,
@@ -71,9 +72,10 @@ router.route("/:id/share").post(verifyJWT, trackShare); // Requires authenticati
 router.route("/:id/shares").get(getDevotionShares); // Public endpoint
 
 // Generic /:id routes (must come AFTER more specific routes)
-router.route("/:id").delete(verifyJWT, requireAdmin, deleteDevotion);
 router
   .route("/:id")
+  .get(optionalAuth, getDevotionById)
+  .delete(verifyJWT, requireAdmin, deleteDevotion)
   .put(upload.single("image"), verifyJWT, requireAdmin, updateDevotion); // update
 
 module.exports = router;

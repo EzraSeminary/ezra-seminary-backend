@@ -1,18 +1,98 @@
 const Contact = require("../models/Contact");
 const nodemailer = require("nodemailer");
+const { OAuth2Client } = require("google-auth-library");
 
-// Centralized transporter using Gmail SMTP. Requires EMAIL_USER and EMAIL_PASS (App Password).
-function getTransporter() {
+const hasCustomSmtpConfig = () =>
+  !!process.env.SMTP_HOST &&
+  !!process.env.SMTP_PORT &&
+  !!process.env.SMTP_USER &&
+  !!process.env.SMTP_PASS;
+
+const hasGmailOAuthConfig = () =>
+  !!process.env.EMAIL_USER &&
+  !!process.env.EMAIL_OAUTH_CLIENT_ID &&
+  !!process.env.EMAIL_OAUTH_CLIENT_SECRET &&
+  !!process.env.EMAIL_OAUTH_REFRESH_TOKEN;
+
+const hasGmailAppPasswordConfig = () =>
+  !!process.env.EMAIL_USER && !!process.env.EMAIL_PASS;
+
+async function getTransporter() {
+  const {
+    SMTP_HOST,
+    SMTP_PORT,
+    SMTP_SECURE,
+    SMTP_USER,
+    SMTP_PASS,
+    EMAIL_USER,
+    EMAIL_PASS,
+    EMAIL_OAUTH_CLIENT_ID,
+    EMAIL_OAUTH_CLIENT_SECRET,
+    EMAIL_OAUTH_REFRESH_TOKEN,
+    EMAIL_OAUTH_REDIRECT_URI,
+  } = process.env;
+
+  if (hasCustomSmtpConfig()) {
+    return nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: Number(SMTP_PORT),
+      secure: String(SMTP_SECURE || "").toLowerCase() === "true",
+      auth: {
+        user: SMTP_USER,
+        pass: SMTP_PASS,
+      },
+    });
+  }
+
+  if (hasGmailOAuthConfig()) {
+    const oauth2Client = new OAuth2Client(
+      EMAIL_OAUTH_CLIENT_ID,
+      EMAIL_OAUTH_CLIENT_SECRET,
+      EMAIL_OAUTH_REDIRECT_URI || "https://developers.google.com/oauthplayground"
+    );
+
+    oauth2Client.setCredentials({
+      refresh_token: EMAIL_OAUTH_REFRESH_TOKEN,
+    });
+
+    const accessTokenResponse = await oauth2Client.getAccessToken();
+    const accessToken = accessTokenResponse?.token || accessTokenResponse;
+
+    return nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        type: "OAuth2",
+        user: EMAIL_USER,
+        clientId: EMAIL_OAUTH_CLIENT_ID,
+        clientSecret: EMAIL_OAUTH_CLIENT_SECRET,
+        refreshToken: EMAIL_OAUTH_REFRESH_TOKEN,
+        accessToken,
+      },
+    });
+  }
+
+  // Fallback to Gmail App Password.
   return nodemailer.createTransport({
     host: "smtp.gmail.com",
     port: 465,
     secure: true,
     auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
+      user: EMAIL_USER,
+      pass: EMAIL_PASS,
     },
   });
 }
+
+const getMailFrom = () =>
+  process.env.EMAIL_FROM_ADDRESS ||
+  process.env.SMTP_USER ||
+  process.env.EMAIL_USER;
+
+const getInboundMailTo = () =>
+  process.env.EMAIL_TO_ADDRESS || process.env.EMAIL_USER || "seminaryezra@gmail.com";
+
+const hasMailConfig = () =>
+  hasCustomSmtpConfig() || hasGmailOAuthConfig() || hasGmailAppPasswordConfig();
 
 const isValidEmail = (email) => {
   const emailRegex =
@@ -33,6 +113,13 @@ const sendContactMessage = async (req, res) => {
       return res.status(400).json({ error: "Invalid email address." });
     }
 
+    if (!hasMailConfig()) {
+      return res.status(503).json({
+        error:
+          "Email service not configured. Provide SMTP credentials or Gmail OAuth/App Password credentials.",
+      });
+    }
+
     // Save the contact message to the database
     const newContact = new Contact({
       firstName,
@@ -43,12 +130,12 @@ const sendContactMessage = async (req, res) => {
 
     await newContact.save();
 
-    const transporter = getTransporter();
+    const transporter = await getTransporter();
 
     // Configure the email options
     const mailOptions = {
-      from: process.env.EMAIL_USER, // Replace with your Gmail email address
-      to: "seminaryezra@gmail.com",
+      from: getMailFrom(),
+      to: getInboundMailTo(),
       subject: "New Contact Message",
       text: `
         First Name: ${firstName}
@@ -94,12 +181,14 @@ const sendContactReply = async (req, res) => {
     }
 
     // Check if email credentials are configured
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    if (!hasMailConfig()) {
       return res.status(503).json({
-        error: "Email service not configured. EMAIL_USER and EMAIL_PASS environment variables are required.",
+        error:
+          "Email service not configured. Provide SMTP credentials or Gmail OAuth/App Password credentials.",
         details: {
-          hasEmailUser: !!process.env.EMAIL_USER,
-          hasEmailPass: !!process.env.EMAIL_PASS,
+          hasCustomSmtp: hasCustomSmtpConfig(),
+          hasGmailOAuth: hasGmailOAuthConfig(),
+          hasGmailAppPassword: hasGmailAppPasswordConfig(),
         },
       });
     }
@@ -109,7 +198,7 @@ const sendContactReply = async (req, res) => {
       return res.status(404).json({ error: "Contact message not found." });
     }
 
-    const transporter = getTransporter();
+    const transporter = await getTransporter();
     
     // Verify transporter connection before sending
     try {
@@ -117,15 +206,15 @@ const sendContactReply = async (req, res) => {
     } catch (verifyError) {
       console.error("Email transporter verification failed:", verifyError);
       return res.status(503).json({
-        error: "Email service connection failed. Please check EMAIL_USER and EMAIL_PASS configuration.",
+        error: "Email service connection failed. Check your SMTP or Gmail mail configuration.",
         details: verifyError.message,
       });
     }
 
     const mailOptions = {
-      from: `Ezra Seminary <${process.env.EMAIL_USER}>`,
+      from: `Ezra Seminary <${getMailFrom()}>`,
       to: contact.email,
-      replyTo: process.env.EMAIL_USER,
+      replyTo: process.env.EMAIL_REPLY_TO || getMailFrom(),
       subject,
       text: message,
       html: `<p>${message.replace(/\n/g, "<br/>")}</p>`,
@@ -156,18 +245,25 @@ const sendContactReply = async (req, res) => {
     )) {
       // Email service configuration error
       return res.status(503).json({
-        error: "Email service configuration error. Check EMAIL_USER/EMAIL_PASS (use a Gmail App Password).",
-        details: process.env.EMAIL_USER ? "EMAIL_USER is set" : "EMAIL_USER is NOT set",
+        error:
+          "Email service configuration error. Use production SMTP credentials or Gmail OAuth/App Password.",
+        details: hasCustomSmtpConfig()
+          ? "SMTP configuration is present"
+          : process.env.EMAIL_USER
+            ? "Gmail configuration is present"
+            : "No mail credentials found",
       });
     }
     
     // Check if email credentials are missing
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    if (!hasMailConfig()) {
       return res.status(503).json({
-        error: "Email service not configured. EMAIL_USER and EMAIL_PASS environment variables are required.",
+        error:
+          "Email service not configured. Provide SMTP credentials or Gmail OAuth/App Password credentials.",
         details: {
-          hasEmailUser: !!process.env.EMAIL_USER,
-          hasEmailPass: !!process.env.EMAIL_PASS,
+          hasCustomSmtp: hasCustomSmtpConfig(),
+          hasGmailOAuth: hasGmailOAuthConfig(),
+          hasGmailAppPassword: hasGmailAppPasswordConfig(),
         },
       });
     }

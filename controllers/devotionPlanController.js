@@ -507,21 +507,35 @@ const listPlanDevotions = async (req, res) => {
 
     // Get all devotions that are in the plan's items array
     // This ensures we only count devotions that are actually linked to the plan
-    const devotionIds = plan.items || [];
+    const devotionIds = Array.isArray(plan.items)
+      ? plan.items.map((itemId) => itemId.toString())
+      : [];
 
-    // Fetch all devotions by their IDs and maintain order
+    // Fetch all devotions by their IDs
     const devotions = await Devotion.find({ _id: { $in: devotionIds } })
-      .sort({ order: sortOrder })
-      .limit(limit)
       .lean()
       .exec();
+
+    // Maintain order based on plan.items
+    const devotionMap = new Map(
+      devotions.map((devotion) => [devotion._id.toString(), devotion])
+    );
+    let orderedDevotions = devotionIds
+      .map((id) => devotionMap.get(id))
+      .filter(Boolean);
+
+    if (sortOrder === -1) {
+      orderedDevotions = orderedDevotions.reverse();
+    }
+
+    const limitedDevotions = orderedDevotions.slice(0, limit);
 
     // Also count items array length for consistency
     const itemCount = Array.isArray(plan.items) ? plan.items.length : 0;
 
     res.status(200).json({
-      items: devotions || [],
-      total: devotions?.length || 0,
+      items: limitedDevotions || [],
+      total: orderedDevotions?.length || 0,
       itemCount: itemCount, // Include the actual items array count for debugging
     });
   } catch (error) {
@@ -701,42 +715,44 @@ const reorderPlanDevotion = async (req, res) => {
     const { id, devotionId } = req.params;
     const { direction } = req.body;
 
-    const plan = await DevotionPlan.findById(id).populate("items");
+    const plan = await DevotionPlan.findById(id);
     if (!plan) {
       return res.status(404).json({ error: "Devotion plan not found" });
     }
 
-    const devotion = await Devotion.findById(devotionId);
-    if (!devotion) {
-      return res.status(404).json({ error: "Devotion not found" });
-    }
-
-    // Get all devotions in order
-    const devotions = await Devotion.find({ planId: id }).sort({ order: 1 });
-    const currentIndex = devotions.findIndex(
-      (d) => d._id.toString() === devotionId
-    );
+    const items = Array.isArray(plan.items)
+      ? plan.items.map((itemId) => itemId.toString())
+      : [];
+    const currentIndex = items.findIndex((itemId) => itemId === devotionId);
 
     if (currentIndex === -1) {
       return res.status(400).json({ error: "Devotion not found in plan" });
     }
 
+    let swapWithIndex = currentIndex;
     if (direction === "up" && currentIndex > 0) {
-      // Swap with previous
-      const prevDevotion = devotions[currentIndex - 1];
-      const tempOrder = devotion.order;
-      devotion.order = prevDevotion.order;
-      prevDevotion.order = tempOrder;
-      await devotion.save();
-      await prevDevotion.save();
-    } else if (direction === "down" && currentIndex < devotions.length - 1) {
-      // Swap with next
-      const nextDevotion = devotions[currentIndex + 1];
-      const tempOrder = devotion.order;
-      devotion.order = nextDevotion.order;
-      nextDevotion.order = tempOrder;
-      await devotion.save();
-      await nextDevotion.save();
+      swapWithIndex = currentIndex - 1;
+    } else if (direction === "down" && currentIndex < items.length - 1) {
+      swapWithIndex = currentIndex + 1;
+    }
+
+    if (swapWithIndex !== currentIndex) {
+      const temp = items[currentIndex];
+      items[currentIndex] = items[swapWithIndex];
+      items[swapWithIndex] = temp;
+      plan.items = items;
+      await plan.save();
+
+      // Keep devotion order values in sync with plan order
+      const bulkOps = items.map((itemId, index) => ({
+        updateOne: {
+          filter: { _id: itemId },
+          update: { $set: { order: index } },
+        },
+      }));
+      if (bulkOps.length > 0) {
+        await Devotion.bulkWrite(bulkOps);
+      }
     }
 
     res.status(200).json({ message: "Devotion reordered successfully" });
