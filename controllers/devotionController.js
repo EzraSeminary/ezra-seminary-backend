@@ -201,6 +201,46 @@ const getDevotions = async (req, res) => {
   }
 };
 
+const getDevotionById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const devotion = await Devotion.findById(id).lean();
+    if (!devotion) {
+      return res.status(404).json({ error: "Devotion not found" });
+    }
+
+    const origin = `${req.protocol}://${req.get("host")}`;
+    if (
+      devotion.image &&
+      typeof devotion.image === "string" &&
+      !devotion.image.startsWith("http")
+    ) {
+      devotion.image = `${origin}/images/${devotion.image}`;
+    }
+
+    devotion.likesCount = Array.isArray(devotion.likes)
+      ? devotion.likes.length
+      : 0;
+    devotion.commentsCount = Array.isArray(devotion.comments)
+      ? devotion.comments.length
+      : 0;
+    devotion.sharesCount = Array.isArray(devotion.shares)
+      ? devotion.shares.length
+      : 0;
+    devotion.isLiked =
+      !!req.user &&
+      Array.isArray(devotion.likes) &&
+      devotion.likes.some(
+        (likeId) => likeId.toString() === req.user._id.toString()
+      );
+
+    return res.status(200).json(devotion);
+  } catch (error) {
+    console.error("Error fetching devotion by id:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
 const deleteDevotion = async (req, res) => {
   try {
     const { id } = req.params;
@@ -834,6 +874,7 @@ const getDevotionsByYearAndMonth = async (req, res) => {
 module.exports = {
   createDevotion,
   getDevotions,
+  getDevotionById,
   deleteDevotion,
   updateDevotion,
   getAvailableYears,
