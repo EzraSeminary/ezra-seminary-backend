@@ -17,6 +17,9 @@ const hasGmailOAuthConfig = () =>
 const hasGmailAppPasswordConfig = () =>
   !!process.env.EMAIL_USER && !!process.env.EMAIL_PASS;
 
+const hasResendConfig = () =>
+  !!process.env.RESEND_API_KEY && !!process.env.EMAIL_FROM_ADDRESS;
+
 async function getTransporter() {
   const {
     SMTP_HOST,
@@ -92,7 +95,47 @@ const getInboundMailTo = () =>
   process.env.EMAIL_TO_ADDRESS || process.env.EMAIL_USER || "seminaryezra@gmail.com";
 
 const hasMailConfig = () =>
-  hasCustomSmtpConfig() || hasGmailOAuthConfig() || hasGmailAppPasswordConfig();
+  hasCustomSmtpConfig() ||
+  hasGmailOAuthConfig() ||
+  hasGmailAppPasswordConfig() ||
+  hasResendConfig();
+
+const sendViaResend = async ({ to, subject, text, html, replyTo }) => {
+  if (!hasResendConfig()) {
+    throw new Error("Resend fallback is not configured");
+  }
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: process.env.EMAIL_FROM_ADDRESS,
+      to: [to],
+      subject,
+      text,
+      html,
+      reply_to: replyTo,
+    }),
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Resend API failed: ${response.status} ${body}`);
+  }
+};
+
+const isAuthOrConnectionError = (error) =>
+  !!(
+    error &&
+    (error.code === "EAUTH" ||
+      error.responseCode === 535 ||
+      error.code === "ECONNECTION" ||
+      error.code === "ETIMEDOUT" ||
+      (error.message && error.message.includes("Invalid login")))
+  );
 
 const isValidEmail = (email) => {
   const emailRegex =
@@ -130,8 +173,6 @@ const sendContactMessage = async (req, res) => {
 
     await newContact.save();
 
-    const transporter = await getTransporter();
-
     // Configure the email options
     const mailOptions = {
       from: getMailFrom(),
@@ -145,8 +186,18 @@ const sendContactMessage = async (req, res) => {
       `,
     };
 
-    // Send the email
-    await transporter.sendMail(mailOptions);
+    if (hasResendConfig()) {
+      await sendViaResend({
+        to: getInboundMailTo(),
+        subject: "New Contact Message",
+        text: mailOptions.text,
+        html: `<pre style="font-family:inherit;white-space:pre-wrap;">${mailOptions.text}</pre>`,
+        replyTo: email,
+      });
+    } else {
+      const transporter = await getTransporter();
+      await transporter.sendMail(mailOptions);
+    }
 
     res
       .status(200)
@@ -198,29 +249,49 @@ const sendContactReply = async (req, res) => {
       return res.status(404).json({ error: "Contact message not found." });
     }
 
-    const transporter = await getTransporter();
-    
-    // Verify transporter connection before sending
-    try {
-      await transporter.verify();
-    } catch (verifyError) {
-      console.error("Email transporter verification failed:", verifyError);
-      return res.status(503).json({
-        error: "Email service connection failed. Check your SMTP or Gmail mail configuration.",
-        details: verifyError.message,
+    const replyTo = process.env.EMAIL_REPLY_TO || getMailFrom();
+    const html = `<p>${message.replace(/\n/g, "<br/>")}</p>`;
+
+    // Prefer Resend when configured (primary); fall back to SMTP on failure
+    if (hasResendConfig()) {
+      try {
+        await sendViaResend({
+          to: contact.email,
+          subject,
+          text: message,
+          html,
+          replyTo,
+        });
+      } catch (resendError) {
+        if (hasCustomSmtpConfig() || hasGmailOAuthConfig() || hasGmailAppPasswordConfig()) {
+          try {
+            const transporter = await getTransporter();
+            await transporter.sendMail({
+              from: `Ezra Seminary <${getMailFrom()}>`,
+              to: contact.email,
+              replyTo,
+              subject,
+              text: message,
+              html,
+            });
+          } catch (smtpError) {
+            throw resendError; // surface Resend error if both fail
+          }
+        } else {
+          throw resendError;
+        }
+      }
+    } else {
+      const transporter = await getTransporter();
+      await transporter.sendMail({
+        from: `Ezra Seminary <${getMailFrom()}>`,
+        to: contact.email,
+        replyTo,
+        subject,
+        text: message,
+        html,
       });
     }
-
-    const mailOptions = {
-      from: `Ezra Seminary <${getMailFrom()}>`,
-      to: contact.email,
-      replyTo: process.env.EMAIL_REPLY_TO || getMailFrom(),
-      subject,
-      text: message,
-      html: `<p>${message.replace(/\n/g, "<br/>")}</p>`,
-    };
-
-    await transporter.sendMail(mailOptions);
 
     contact.repliedAt = new Date();
     await contact.save();
@@ -236,22 +307,12 @@ const sendContactReply = async (req, res) => {
     });
     
     // Check for email authentication/configuration errors
-    if (error && (
-      error.code === "EAUTH" || 
-      error.responseCode === 535 ||
-      error.code === "ECONNECTION" ||
-      error.code === "ETIMEDOUT" ||
-      (error.message && error.message.includes("Invalid login"))
-    )) {
+    if (isAuthOrConnectionError(error)) {
       // Email service configuration error
       return res.status(503).json({
         error:
-          "Email service configuration error. Use production SMTP credentials or Gmail OAuth/App Password.",
-        details: hasCustomSmtpConfig()
-          ? "SMTP configuration is present"
-          : process.env.EMAIL_USER
-            ? "Gmail configuration is present"
-            : "No mail credentials found",
+          "Email provider authentication failed. Configure SMTP/Gmail OAuth correctly or add RESEND_API_KEY + EMAIL_FROM_ADDRESS fallback.",
+        details: error.message,
       });
     }
     

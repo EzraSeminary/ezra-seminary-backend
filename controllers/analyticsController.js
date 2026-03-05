@@ -108,7 +108,71 @@ const getAnalytics = async () => {
 
     await analyticsData.save();
 
-    return analyticsData;
+    // Build lightweight engagement feed for the latest daily devotion
+    const latestDevotion = await Devotion.findOne({
+      $or: [{ planId: { $exists: false } }, { planId: null }],
+    })
+      .sort({ createdAt: -1 })
+      .select("title month day year likes comments")
+      .populate("comments.user", "firstName lastName email")
+      .lean();
+
+    let latestDevotionEngagement = null;
+    if (latestDevotion) {
+      const likeUserIds = Array.isArray(latestDevotion.likes)
+        ? latestDevotion.likes
+        : [];
+      const likeUsers = likeUserIds.length
+        ? await User.find({ _id: { $in: likeUserIds } })
+            .select("firstName lastName email")
+            .lean()
+        : [];
+
+      const likesById = new Map(likeUsers.map((u) => [String(u._id), u]));
+      const likeEvents = likeUserIds
+        .map((id) => likesById.get(String(id)))
+        .filter(Boolean)
+        .slice(0, 20)
+        .map((u) => ({
+          userName: `${u.firstName || ""} ${u.lastName || ""}`.trim(),
+          email: u.email || "",
+        }));
+
+      const commentEvents = (latestDevotion.comments || [])
+        .slice()
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 20)
+        .map((c) => ({
+          userName: `${c.user?.firstName || ""} ${c.user?.lastName || ""}`.trim() || "Unknown User",
+          email: c.user?.email || "",
+          text: c.text || "",
+          createdAt: c.createdAt,
+        }));
+
+      latestDevotionEngagement = {
+        devotion: {
+          id: latestDevotion._id,
+          title: latestDevotion.title || "",
+          month: latestDevotion.month || "",
+          day: latestDevotion.day || "",
+          year: latestDevotion.year || null,
+        },
+        likesCount: likeUserIds.length,
+        commentsCount: (latestDevotion.comments || []).length,
+        likeEvents,
+        commentEvents,
+      };
+    }
+
+    const analyticsObject =
+      typeof analyticsData.toObject === "function"
+        ? analyticsData.toObject()
+        : analyticsData;
+
+    return {
+      ...analyticsObject,
+      latestDevotionEngagement,
+    };
   } catch (error) {
     console.error(error);
     throw new Error("Internal server error");

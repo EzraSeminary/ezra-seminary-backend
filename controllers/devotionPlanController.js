@@ -60,6 +60,51 @@ const getDevotionPlans = async (req, res) => {
   }
 };
 
+// Admin: Get all devotion plans (published + unpublished)
+const adminGetDevotionPlans = async (req, res) => {
+  try {
+    let { limit = 0, sort = "desc" } = req.query;
+
+    limit = parseInt(limit, 10);
+    if (isNaN(limit) || limit < 0) {
+      return res.status(400).json({ error: "Invalid 'limit' parameter" });
+    }
+    if (limit === 0) {
+      limit = 1000;
+    }
+    const MAX_LIMIT = 2000;
+    if (limit > MAX_LIMIT) {
+      limit = MAX_LIMIT;
+    }
+
+    const sortOrder = sort.toLowerCase() === "asc" ? 1 : -1;
+
+    const plans = await DevotionPlan.find({})
+      .populate("items", "title chapter verse image")
+      .sort({ createdAt: sortOrder })
+      .limit(limit)
+      .lean();
+
+    const plansWithCount = plans.map((plan) => {
+      const itemCount = Array.isArray(plan.items) ? plan.items.length : 0;
+      return {
+        ...plan,
+        numItems: itemCount,
+      };
+    });
+
+    res.status(200).json({
+      items: plansWithCount,
+      total: plansWithCount.length,
+    });
+  } catch (error) {
+    console.error("Error fetching admin devotion plans:", error);
+    res
+      .status(500)
+      .json({ error: "Internal Server Error", message: error.message });
+  }
+};
+
 // Get specific devotion plan
 const getDevotionPlanById = async (req, res) => {
   try {
@@ -764,6 +809,7 @@ const reorderPlanDevotion = async (req, res) => {
 
 module.exports = {
   getDevotionPlans,
+  adminGetDevotionPlans,
   getDevotionPlanById,
   getUserDevotionPlans,
   getDevotionPlanProgress,

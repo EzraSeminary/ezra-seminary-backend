@@ -9,6 +9,7 @@ const upload = require("../middleware/upload");
 
 const {
   getDevotionPlans,
+  adminGetDevotionPlans,
   getDevotionPlanById,
   getUserDevotionPlans,
   getDevotionPlanProgress,
@@ -29,6 +30,9 @@ const {
 // Public endpoints
 // Get all devotion plans (public)
 router.get("/", getDevotionPlans);
+
+// Get all devotion plans for admin/instructor (published + unpublished)
+router.get("/admin/all", verifyJWT, requireAdmin, adminGetDevotionPlans);
 
 // User endpoints (requires auth) - MUST come before /:id routes
 // Get user's devotion plans (requires auth)
