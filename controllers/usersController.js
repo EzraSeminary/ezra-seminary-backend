@@ -4,8 +4,43 @@ const { getAnalytics } = require("./analyticsController");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 const { OAuth2Client } = require("google-auth-library");
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const client = new OAuth2Client();
 const { uploadImage } = require("../middleware/imagekit-users"); // Using ImageKit instead of Cloudinary
+
+const DEFAULT_GOOGLE_WEB_CLIENT_ID =
+  "1096965053624-rofq5l7e014rf61ovlbo41b4e3ikp542.apps.googleusercontent.com";
+const DEFAULT_GOOGLE_IOS_CLIENT_ID =
+  "1096965053624-706nf9fvl7dkm94kkrdifv8d8n7brj05.apps.googleusercontent.com";
+const DEFAULT_GOOGLE_ANDROID_CLIENT_ID =
+  "1096965053624-rrvr1ce3iomajdf64k3jcfer9uf55js1.apps.googleusercontent.com";
+
+const getGoogleAudiences = () => {
+  return [
+    process.env.GOOGLE_CLIENT_ID,
+    DEFAULT_GOOGLE_WEB_CLIENT_ID,
+    process.env.GOOGLE_IOS_CLIENT_ID || DEFAULT_GOOGLE_IOS_CLIENT_ID,
+    process.env.GOOGLE_ANDROID_CLIENT_ID || DEFAULT_GOOGLE_ANDROID_CLIENT_ID,
+  ].filter(Boolean);
+};
+
+const decodeJwtPayload = (token) => {
+  try {
+    const [, payload] = String(token || "").split(".");
+    if (!payload) {
+      return null;
+    }
+
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(
+      normalized.length + ((4 - (normalized.length % 4)) % 4),
+      "="
+    );
+
+    return JSON.parse(Buffer.from(padded, "base64").toString("utf8"));
+  } catch {
+    return null;
+  }
+};
 
 // Create JWT
 const createToken = (_id) => {
@@ -41,11 +76,17 @@ const googleLogin = async (req, res) => {
 const verifyGoogleToken = async (req, res) => {
   try {
     const { token: reqToken } = req.body;
+    const audiences = getGoogleAudiences();
+    const decodedPayload = decodeJwtPayload(reqToken);
+    console.log("Google token payload audience:", decodedPayload?.aud);
+    console.log("Accepted Google audiences:", audiences);
+
     const ticket = await client.verifyIdToken({
       idToken: reqToken,
-      audience: process.env.GOOGLE_CLIENT_ID,
+      audience: audiences,
     });
     const payload = ticket.getPayload();
+    console.log("Google token audience accepted:", payload.aud, audiences);
     const userid = payload["sub"];
 
     // Find user by googleId or email
@@ -86,7 +127,12 @@ const verifyGoogleToken = async (req, res) => {
       achievement: user.achievement,
     });
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    console.error("Google token verification failed:", error.message);
+    res.status(400).json({
+      error: error.message,
+      tokenAudience: decodeJwtPayload(req.body?.token)?.aud || null,
+      acceptedAudiences: getGoogleAudiences(),
+    });
   }
 };
 

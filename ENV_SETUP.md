@@ -28,7 +28,6 @@ FRONTEND_URL=https://ezraseminary.org
 GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
 ```
-
 ---
 
 ## Email: Resend as Primary (recommended for contact & reply)

@@ -1,5 +1,10 @@
 // app.js
 
+const bufferModule = require("buffer");
+if (!bufferModule.SlowBuffer) {
+  // Node 25 removed SlowBuffer; some transitive deps still expect it.
+  bufferModule.SlowBuffer = bufferModule.Buffer;
+}
 const express = require("express");
 
 const app = express();
