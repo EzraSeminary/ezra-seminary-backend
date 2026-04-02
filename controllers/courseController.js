@@ -8,7 +8,7 @@ const { upload, uploadToImageKit, deleteFromImageKit } = require("../middleware/
 courseController.get("/getall", async (req, res) => {
   try {
     // Destructure and set default values for query parameters
-    let { limit = 0, sort = "desc" } = req.query;
+    let { limit = 0, sort = "desc", page = 0 } = req.query;
 
     // Validate 'limit' parameter to ensure it's a non-negative integer
     limit = parseInt(limit, 10);
@@ -27,23 +27,49 @@ courseController.get("/getall", async (req, res) => {
     // Validate 'sort' parameter
     const sortOrder = sort.toLowerCase() === "asc" ? 1 : -1;
 
-    const courses = await Course.find({})
-      .select("-chapters")
-      .sort({ createdAt: sortOrder })
-      .limit(limit);
+    // Optional pagination: if page is provided (>0), return paged response object.
+    // If page is not provided (0), preserve existing array response for backward compatibility.
+    page = parseInt(page, 10);
+    if (isNaN(page) || page < 0) {
+      return res.status(400).json({ error: "Invalid 'page' parameter" });
+    }
 
-    // Get the chapter count for each course
-    const coursesWithChapterCount = await Promise.all(
-      courses.map(async (course) => {
-        const fullCourse = await Course.findById(course._id);
-        return {
-          ...course.toObject(),
-          chapterCount: fullCourse.chapters.length,
-        };
-      })
-    );
+    const matchStage = {};
+    const basePipeline = [
+      { $match: matchStage },
+      { $sort: { createdAt: sortOrder } },
+      {
+        $project: {
+          title: 1,
+          description: 1,
+          category: 1,
+          image: 1,
+          published: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          chapterCount: { $size: { $ifNull: ["$chapters", []] } },
+        },
+      },
+    ];
 
-    res.status(200).json(coursesWithChapterCount);
+    if (page > 0) {
+      const skip = (page - 1) * limit;
+      const [items, total] = await Promise.all([
+        Course.aggregate([...basePipeline, { $skip: skip }, { $limit: limit }]),
+        Course.countDocuments(matchStage),
+      ]);
+
+      return res.status(200).json({
+        items,
+        page,
+        limit,
+        total,
+        hasMore: skip + items.length < total,
+      });
+    }
+
+    const courses = await Course.aggregate([...basePipeline, { $limit: limit }]);
+    res.status(200).json(courses);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server error" });
@@ -54,7 +80,7 @@ courseController.get("/getall", async (req, res) => {
 courseController.get("/get/published", async (req, res) => {
   try {
     // Destructure and set default values for query parameters
-    let { limit = 0, sort = "desc" } = req.query;
+    let { limit = 0, sort = "desc", page = 0 } = req.query;
 
     // Validate 'limit' parameter to ensure it's a non-negative integer
     limit = parseInt(limit, 10);
@@ -73,23 +99,49 @@ courseController.get("/get/published", async (req, res) => {
     // Validate 'sort' parameter
     const sortOrder = sort.toLowerCase() === "asc" ? 1 : -1;
 
-    const courses = await Course.find({ published: true })
-      .select("-chapters")
-      .sort({ createdAt: sortOrder })
-      .limit(limit);
+    // Optional pagination: if page is provided (>0), return paged response object.
+    // If page is not provided (0), preserve existing array response for backward compatibility.
+    page = parseInt(page, 10);
+    if (isNaN(page) || page < 0) {
+      return res.status(400).json({ error: "Invalid 'page' parameter" });
+    }
 
-    // Get the chapter count for each course
-    const coursesWithChapterCount = await Promise.all(
-      courses.map(async (course) => {
-        const fullCourse = await Course.findById(course._id);
-        return {
-          ...course.toObject(),
-          chapterCount: fullCourse.chapters.length,
-        };
-      })
-    );
+    const matchStage = { published: true };
+    const basePipeline = [
+      { $match: matchStage },
+      { $sort: { createdAt: sortOrder } },
+      {
+        $project: {
+          title: 1,
+          description: 1,
+          category: 1,
+          image: 1,
+          published: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          chapterCount: { $size: { $ifNull: ["$chapters", []] } },
+        },
+      },
+    ];
 
-    res.status(200).json(coursesWithChapterCount);
+    if (page > 0) {
+      const skip = (page - 1) * limit;
+      const [items, total] = await Promise.all([
+        Course.aggregate([...basePipeline, { $skip: skip }, { $limit: limit }]),
+        Course.countDocuments(matchStage),
+      ]);
+
+      return res.status(200).json({
+        items,
+        page,
+        limit,
+        total,
+        hasMore: skip + items.length < total,
+      });
+    }
+
+    const courses = await Course.aggregate([...basePipeline, { $limit: limit }]);
+    res.status(200).json(courses);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server error" });
